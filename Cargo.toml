@@ -1,0 +1,18 @@
+[package]
+name = "GaugeMCRunner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.0", features = ["derive"] }
+ndarray = {version = "*"}
+ndarray-npy = "0.8"
+rand = "0.8"
+log = "0.4.20"
+chrono = "0.4.34"
+env_logger = "0.11.1"
+
+[dependencies.gaugemc]
+path = "../GaugeTheoryMC"
+default-features = false
+features = ["gpu-cuda"]
