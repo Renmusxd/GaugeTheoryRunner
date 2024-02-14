@@ -4,7 +4,7 @@ use clap::Parser;
 use env_logger::Builder;
 use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
 use log::LevelFilter;
-use ndarray::{Array2, Array6, Axis};
+use ndarray::{Array1, Array2, Array6, Axis};
 use ndarray_npy::NpzWriter;
 use rand::prelude::SliceRandom;
 use rand::Rng;
@@ -36,8 +36,6 @@ struct Args {
     klow: f32,
     #[arg(long, default_value_t = 1.5)]
     khigh: f32,
-    #[arg(long, default_value_t = false)]
-    verbose: bool,
     #[arg(long, default_value_t = 10)]
     log_every: usize,
     #[arg(long, default_value_t = Potential::villain)]
@@ -66,15 +64,7 @@ enum StepAction {
     GlobalUpdate,
     ParallelTempering,
 }
-fn run(args: &Args) -> Result<Array2<f32>, CudaError> {
-    let init_state = Array6::zeros((
-        args.replicas,
-        args.systemsize,
-        args.systemsize,
-        args.systemsize,
-        args.systemsize,
-        6,
-    ));
+fn run(args: &Args) -> Result<(Array2<f32>, Array1<f32>), CudaError> {
     let mut vns = Array2::zeros((args.replicas, 64));
 
     let ks = match args.replicas {
@@ -84,9 +74,7 @@ fn run(args: &Args) -> Result<Array2<f32>, CudaError> {
             (0..r).map(|ir| ir as f32 * dk + args.klow).collect()
         }
     };
-    if args.verbose {
-        println!("Running on ks: {:?}", ks);
-    }
+    log::debug!("Running on ks: {:?}", ks);
 
     ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
         *x = match args.potential_type {
@@ -100,14 +88,6 @@ fn run(args: &Args) -> Result<Array2<f32>, CudaError> {
         };
     });
 
-    vns.axis_iter_mut(Axis(0))
-        .enumerate()
-        .for_each(|(i, mut v)| {
-            v.iter_mut().enumerate().for_each(|(j, v)| {
-                *v = ((i + 1) * (j.pow(2))) as f32 / 8.0;
-            })
-        });
-
     let mut state = CudaBackend::new(
         SiteIndex::new(
             args.systemsize,
@@ -116,7 +96,14 @@ fn run(args: &Args) -> Result<Array2<f32>, CudaError> {
             args.systemsize,
         ),
         vns,
-        Some(DualState::new_plaquettes(init_state)),
+        Some(DualState::new_plaquettes(Array6::zeros((
+            args.replicas,
+            args.systemsize,
+            args.systemsize,
+            args.systemsize,
+            args.systemsize,
+            6,
+        )))),
         None,
         None,
         None,
@@ -171,7 +158,7 @@ fn run(args: &Args) -> Result<Array2<f32>, CudaError> {
         },
     )?;
     log::info!("Done!");
-    Ok(output)
+    Ok((output, Array1::from_vec(ks)))
 }
 
 fn steps<R: Rng>(
@@ -212,10 +199,11 @@ fn main() -> Result<(), String> {
         .init();
 
     let args = Args::parse();
-    let output = run(&args).map_err(|x| x.to_string())?;
-    let mut npz = NpzWriter::new(File::create(args.output).map_err(|x| x.to_string())?);
+    let (output, ks) = run(&args).map_err(|x| x.to_string())?;
+    let mut npz = NpzWriter::new_compressed(File::create(args.output).map_err(|x| x.to_string())?);
     npz.add_array("energies", &output)
         .map_err(|x| x.to_string())?;
+    npz.add_array("ks", &ks).map_err(|x| x.to_string())?;
     npz.finish().map_err(|x| x.to_string())?;
     Ok(())
 }
