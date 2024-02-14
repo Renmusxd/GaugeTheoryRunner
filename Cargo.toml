@@ -13,6 +13,6 @@ chrono = "0.4.34"
 env_logger = "0.11.1"
 
 [dependencies.gaugemc]
-path = "../GaugeTheoryMC"
+git = "https://github.com/Renmusxd/GaugeMC.git"
 default-features = false
 features = ["gpu-cuda"]
