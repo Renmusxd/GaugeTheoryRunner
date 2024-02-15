@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::Write;
+use num_complex::Complex;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -61,6 +62,35 @@ enum Potential {
     binary,
 }
 
+impl Potential {
+    fn eval(&self, n: u32, k: f32) -> f32 {
+        match self {
+            Potential::villain => {
+                k * n.pow(2) as f32
+            }
+            Potential::cosine => {
+                if n == 0 {
+                    0.0
+                } else {
+                    let t = scilib::math::bessel::i_nu(n as f64, Complex::from(k as f64));
+                    let b = scilib::math::bessel::i_nu(0., Complex::from(k as f64));
+                    assert!(t.im < f64::EPSILON);
+                    assert!(b.im < f64::EPSILON);
+                    let res = - (t.re/b.re).ln();
+                    res as f32
+                }
+            }
+            Potential::binary => {
+                match n {
+                    0 => 0.0,
+                    1 => k,
+                    _ => 1000.
+                }
+            }
+        }
+    }
+}
+
 impl Display for Potential {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&format!("{:?}", self))
@@ -87,15 +117,7 @@ fn run(args: &Args) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>), S
     let ks = Array1::from_vec(ks);
 
     ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
-        *x = match args.potential_type {
-            Potential::villain => ks[r] * (np.pow(2) as f32),
-            Potential::cosine => {
-                todo!()
-            }
-            Potential::binary => {
-                todo!()
-            }
-        };
+        *x = args.potential_type.eval(np as u32, ks[r]);
     });
 
     let mut state = CudaBackend::new(
