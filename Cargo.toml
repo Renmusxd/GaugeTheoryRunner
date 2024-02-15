@@ -1,5 +1,5 @@
 [package]
-name = "GaugeMCRunner"
+name = "gauge_mc_runner"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,6 +11,8 @@ rand = "0.8"
 log = "0.4.20"
 chrono = "0.4.34"
 env_logger = "0.11.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
 
 [dependencies.gaugemc]
 git = "https://github.com/Renmusxd/GaugeMC.git"
