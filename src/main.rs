@@ -6,13 +6,13 @@ use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
 use log::LevelFilter;
 use ndarray::{s, Array1, Array2, Array3, Array6, ArrayView1, ArrayView2, ArrayView3, Axis};
 use ndarray_npy::NpzWriter;
+use num_complex::Complex;
 use rand::prelude::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::Write;
-use num_complex::Complex;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -42,8 +42,12 @@ struct Args {
     log_every: usize,
     #[arg(long, default_value_t = Potential::villain)]
     potential_type: Potential,
-    #[arg(short, long, default_value_t = String::from("action.npz"))]
-    output_action: String,
+    #[arg(long, default_value_t = 32)]
+    potential_values: usize,
+    #[arg(long, default_value = None)]
+    cap_potentials: Option<f32>,
+    #[arg(short, long, default_value_t = String::from("out.npz"))]
+    output: String,
     #[arg(long, default_value_t = false)]
     output_winding: bool,
     #[arg(long, default_value_t = 0)]
@@ -65,9 +69,7 @@ enum Potential {
 impl Potential {
     fn eval(&self, n: u32, k: f32) -> f32 {
         match self {
-            Potential::villain => {
-                k * n.pow(2) as f32
-            }
+            Potential::villain => k * n.pow(2) as f32,
             Potential::cosine => {
                 if n == 0 {
                     0.0
@@ -76,17 +78,15 @@ impl Potential {
                     let b = scilib::math::bessel::i_nu(0., Complex::from(k as f64));
                     assert!(t.im < f64::EPSILON);
                     assert!(b.im < f64::EPSILON);
-                    let res = - (t.re/b.re).ln();
+                    let res = -(t.re / b.re).ln();
                     res as f32
                 }
             }
-            Potential::binary => {
-                match n {
-                    0 => 0.0,
-                    1 => k,
-                    _ => 1000.
-                }
-            }
+            Potential::binary => match n {
+                0 => 0.0,
+                1 => k,
+                _ => 1000.,
+            },
         }
     }
 }
@@ -103,8 +103,10 @@ enum StepAction {
     GlobalUpdate,
     ParallelTempering,
 }
-fn run(args: &Args) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>), String> {
-    let mut vns = Array2::zeros((args.replicas, 64));
+fn run(
+    args: &Args,
+) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>, Array2<f32>), String> {
+    let mut vns = Array2::zeros((args.replicas, args.potential_values));
 
     let ks = match args.replicas {
         1 => vec![(args.khigh + args.klow) / 2.0; 1],
@@ -119,6 +121,9 @@ fn run(args: &Args) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>), S
     ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
         *x = args.potential_type.eval(np as u32, ks[r]);
     });
+    if let Some(cap) = args.cap_potentials {
+        vns.slice_mut(s![.., -1]).iter_mut().for_each(|x| *x = cap);
+    }
 
     let mut state = CudaBackend::new(
         SiteIndex::new(
@@ -127,7 +132,7 @@ fn run(args: &Args) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>), S
             args.systemsize,
             args.systemsize,
         ),
-        vns,
+        vns.clone(),
         Some(DualState::new_plaquettes(Array6::zeros((
             args.replicas,
             args.systemsize,
@@ -208,19 +213,20 @@ fn run(args: &Args) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>), S
         }
 
         if args.write_output_every > 0 && (sample_number + 1) % args.write_output_every == 0 {
-            log::debug!("Writing output to {}", args.output_action);
+            log::debug!("Writing output to {}", args.output);
             let output_subview = action_output.slice(s![..=sample_number, ..]);
             write_output(
                 output_subview,
                 winding_output.as_ref().map(|x| x.view()),
                 ks.view(),
-                &args.output_action,
+                vns.view(),
+                &args.output,
             )?;
         }
     }
 
     log::info!("Done!");
-    Ok((action_output, winding_output, ks))
+    Ok((action_output, winding_output, ks, vns))
 }
 
 fn steps<R: Rng>(
@@ -250,6 +256,7 @@ fn write_output<Str: AsRef<str>>(
     energies: ArrayView2<f32>,
     windings: Option<ArrayView3<i32>>,
     ks: ArrayView1<f32>,
+    potentials: ArrayView2<f32>,
     filename: Str,
 ) -> Result<(), String> {
     let mut npz =
@@ -261,6 +268,8 @@ fn write_output<Str: AsRef<str>>(
             .map_err(|x| x.to_string())?;
     }
     npz.add_array("ks", &ks).map_err(|x| x.to_string())?;
+    npz.add_array("potentials", &potentials)
+        .map_err(|x| x.to_string())?;
     npz.finish().map_err(|x| x.to_string())?;
     Ok(())
 }
@@ -283,12 +292,13 @@ fn main() -> Result<(), String> {
 
     log::debug!("Config: {:?}", args);
 
-    let (energies, winding, ks) = run(&args).map_err(|x| x.to_string())?;
+    let (energies, winding, ks, potentials) = run(&args).map_err(|x| x.to_string())?;
     write_output(
         energies.view(),
         winding.as_ref().map(|x| x.view()),
         ks.view(),
-        &args.output_action,
+        potentials.view(),
+        &args.output,
     )?;
 
     Ok(())
