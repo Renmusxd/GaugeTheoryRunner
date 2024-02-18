@@ -4,7 +4,9 @@ use clap::Parser;
 
 use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
 
-use ndarray::{s, Array1, Array2, Array3, Array6, ArrayView1, ArrayView2, ArrayView3, Axis};
+use ndarray::{
+    s, Array0, Array1, Array2, Array3, Array6, ArrayView1, ArrayView2, ArrayView3, Axis,
+};
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
 use rand::prelude::SliceRandom;
@@ -18,7 +20,7 @@ use std::fs::File;
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long, default_value_t = 1)]
-    replicas: usize,
+    replicas_ks: usize,
     #[arg(short = 'L', long, default_value_t = 8)]
     systemsize: usize,
     #[arg(short = 'N', long, default_value_t = 100)]
@@ -37,6 +39,12 @@ struct Args {
     klow: f32,
     #[arg(long, default_value_t = 1.5)]
     khigh: f32,
+    #[arg(short, long, default_value = None)]
+    chemical_potential_replicas: Option<usize>,
+    #[arg(long, default_value_t = 0.0)]
+    chemicallow: f32,
+    #[arg(long, default_value_t = 0.5)]
+    chemicalhigh: f32,
     #[arg(long, default_value_t = 10)]
     log_every: usize,
     #[arg(long, default_value = "villain")]
@@ -49,12 +57,12 @@ struct Args {
     output: String,
     #[arg(long, default_value_t = false)]
     output_winding: bool,
-    #[arg(long, default_value_t = 0)]
-    write_output_every: usize,
     #[arg(long, default_value = None)]
     config_input: Option<String>,
     #[arg(long, default_value = None)]
     config_output: Option<String>,
+    #[arg(long, default_value_t = false)]
+    output_tempering_debug: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
@@ -103,12 +111,30 @@ enum StepAction {
     GlobalUpdate,
     ParallelTempering,
 }
-fn run(
-    args: &Args,
-) -> Result<(Array2<f32>, Option<Array3<i32>>, Array1<f32>, Array2<f32>), String> {
-    let mut vns = Array2::zeros((args.replicas, args.potential_values));
 
-    let ks = match args.replicas {
+struct RunResult {
+    // Action
+    actions: Array2<f32>,
+    // Winding numbers
+    windings: Option<Array3<i32>>,
+    // The unique values of ks
+    ks: Array1<f32>,
+    // The value of k for each replica
+    replica_ks: Array1<f32>,
+    // The full V array for each replica
+    potentials: Array2<f32>,
+    // The unique values of mu
+    mus: Option<Array1<f32>>,
+    // The value of mu for each replica
+    replica_mus: Option<Array1<f32>>,
+    // The gpu state
+    state: CudaBackend,
+}
+
+fn run(args: &Args) -> Result<RunResult, String> {
+    let chemical_potential_replicas = args.chemical_potential_replicas.unwrap_or(1);
+
+    let ks = match args.replicas_ks {
         1 => vec![(args.khigh + args.klow) / 2.0; 1],
         r => {
             let dk = (args.khigh - args.klow) / (r as f32 - 1.0);
@@ -118,12 +144,39 @@ fn run(
     log::debug!("Running on ks: {:?}", ks);
     let ks = Array1::from_vec(ks);
 
+    let mus = match args.chemical_potential_replicas {
+        None => vec![0.0; 1],
+        Some(1) => vec![(args.chemicalhigh + args.chemicallow) / 2.0; 1],
+        Some(r) => {
+            let dk = (args.chemicalhigh - args.chemicallow) / (r as f32 - 1.0);
+            (0..r).map(|ir| ir as f32 * dk + args.chemicallow).collect()
+        }
+    };
+    log::debug!("Running on mus: {:?}", mus);
+    let mus = Array1::from_vec(mus);
+
+    let mut vns = Array2::zeros((
+        args.replicas_ks * chemical_potential_replicas,
+        args.potential_values,
+    ));
     ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
-        *x = args.potential_type.eval(np as u32, ks[r]);
+        let kr = r % args.replicas_ks;
+        *x = args.potential_type.eval(np as u32, ks[kr]);
     });
     if let Some(cap) = args.cap_potentials {
         vns.slice_mut(s![.., -1]).iter_mut().for_each(|x| *x = cap);
     }
+
+    let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
+    ndarray::Zip::indexed(&mut replica_ks).for_each(|r, x| {
+        let kr = r % args.replicas_ks;
+        *x = ks[kr];
+    });
+    let mut replica_mus = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
+    ndarray::Zip::indexed(&mut replica_mus).for_each(|r, x| {
+        let mur = r / args.replicas_ks;
+        *x = mus[mur];
+    });
 
     let mut state = CudaBackend::new(
         SiteIndex::new(
@@ -133,19 +186,14 @@ fn run(
             args.systemsize,
         ),
         vns.clone(),
-        Some(DualState::new_plaquettes(Array6::zeros((
-            args.replicas,
-            args.systemsize,
-            args.systemsize,
-            args.systemsize,
-            args.systemsize,
-            6,
-        )))),
         None,
         None,
         None,
+        args.chemical_potential_replicas
+            .map(|_| replica_mus.clone()),
     )
     .map_err(|x| x.to_string())?;
+    state.set_parallel_tracking(args.output_tempering_debug);
 
     let mut rng = rand::thread_rng();
     let mut local_versus_global = (0..args.local_updates_per_step)
@@ -154,12 +202,59 @@ fn run(
         .chain((0..args.tempering_updates_per_step).map(|_| ParallelTempering))
         .collect::<Vec<_>>();
 
-    let perms_a = (0..args.replicas / 2)
-        .map(|x| (2 * x, 2 * x + 1))
-        .collect::<Vec<_>>();
-    let perms_b = (0..(args.replicas - 1) / 2)
-        .map(|x| (2 * x + 1, 2 * (x + 1)))
-        .collect::<Vec<_>>();
+    let mut parallel_perms = vec![];
+    let perm_ks_a = (0..chemical_potential_replicas)
+        .flat_map(|mur| {
+            (0..args.replicas_ks / 2).map(move |kr| {
+                (
+                    (2 * kr) + mur * args.replicas_ks,
+                    (2 * kr + 1) + mur * args.replicas_ks,
+                )
+            })
+        })
+        .collect();
+    parallel_perms.push(perm_ks_a);
+
+    let perm_ks_b = (0..chemical_potential_replicas)
+        .flat_map(|mur| {
+            (0..(args.replicas_ks - 1) / 2)
+                .map(move |kr| {
+                    (
+                        (2 * kr + 1) + mur * args.replicas_ks,
+                        (2 * (kr + 1)) + mur * args.replicas_ks,
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    parallel_perms.push(perm_ks_b);
+
+    if let Some(chemical_potential_replicas) = args.chemical_potential_replicas {
+        let perm_mus_a = (0..args.replicas_ks)
+            .flat_map(|kr| {
+                (0..chemical_potential_replicas / 2).map(move |mur| {
+                    (
+                        kr + (2 * mur) * args.replicas_ks,
+                        kr + (2 * mur + 1) * args.replicas_ks,
+                    )
+                })
+            })
+            .collect();
+        parallel_perms.push(perm_mus_a);
+
+        let perm_mus_b = (0..args.replicas_ks)
+            .flat_map(|kr| {
+                (0..chemical_potential_replicas / 2).map(move |mur| {
+                    (
+                        kr + (2 * mur + 1) * args.replicas_ks,
+                        kr + (2 * (mur + 1)) * args.replicas_ks,
+                    )
+                })
+            })
+            .collect();
+        parallel_perms.push(perm_mus_b);
+    };
+    log::debug!("Permutations: {:?}", parallel_perms);
 
     for warmup_sample in 0..args.warmup_samples {
         if warmup_sample % args.log_every == 0 {
@@ -169,17 +264,23 @@ fn run(
             args,
             &mut local_versus_global,
             &mut state,
-            &perms_a,
-            &perms_b,
+            &parallel_perms,
             &mut rng,
         )
         .map_err(|x| x.to_string())?;
     }
     log::info!("Done!");
 
-    let mut action_output = Array2::zeros((args.num_samples, args.replicas));
+    let mut action_output = Array2::zeros((
+        args.num_samples,
+        args.replicas_ks * chemical_potential_replicas,
+    ));
     let mut winding_output = if args.output_winding {
-        Some(Array3::zeros((args.num_samples, args.replicas, 6)))
+        Some(Array3::zeros((
+            args.num_samples,
+            args.replicas_ks * chemical_potential_replicas,
+            6,
+        )))
     } else {
         None
     };
@@ -193,8 +294,7 @@ fn run(
             args,
             &mut local_versus_global,
             &mut state,
-            &perms_a,
-            &perms_b,
+            &parallel_perms,
             &mut rng,
         )
         .map_err(|x| x.to_string())?;
@@ -211,30 +311,31 @@ fn run(
                 .zip(windings)
                 .for_each(|(x, y)| *x = y);
         }
-
-        if args.write_output_every > 0 && (sample_number + 1) % args.write_output_every == 0 {
-            log::debug!("Writing output to {}", args.output);
-            let output_subview = action_output.slice(s![..=sample_number, ..]);
-            write_output(
-                output_subview,
-                winding_output.as_ref().map(|x| x.view()),
-                ks.view(),
-                vns.view(),
-                &args.output,
-            )?;
-        }
     }
 
+    let mus = args.chemical_potential_replicas.map(|_| mus);
+    let replica_mus = args.chemical_potential_replicas.map(|_| replica_mus);
+
+    let result = RunResult {
+        actions: action_output,
+        windings: winding_output,
+        ks,
+        mus,
+        potentials: vns,
+        replica_mus,
+        replica_ks,
+        state,
+    };
+
     log::info!("Done!");
-    Ok((action_output, winding_output, ks, vns))
+    Ok(result)
 }
 
 fn steps<R: Rng>(
     args: &Args,
     local_versus_global: &mut Vec<StepAction>,
     state: &mut CudaBackend,
-    perms_a: &[(usize, usize)],
-    perms_b: &[(usize, usize)],
+    parallel_perms: &[Vec<(usize, usize)>],
     rng: &mut R,
 ) -> Result<(), CudaError> {
     for i in 0..args.steps_per_sample {
@@ -244,7 +345,7 @@ fn steps<R: Rng>(
                 LocalUpdate => state.run_local_update_sweep()?,
                 GlobalUpdate => state.run_global_update_sweep()?,
                 ParallelTempering => {
-                    state.parallel_tempering_step(if i % 2 == 0 { perms_a } else { perms_b })?
+                    state.parallel_tempering_step(&parallel_perms[i % parallel_perms.len()])?
                 }
             }
         }
@@ -252,24 +353,40 @@ fn steps<R: Rng>(
     Ok(())
 }
 
-fn write_output<Str: AsRef<str>>(
-    energies: ArrayView2<f32>,
-    windings: Option<ArrayView3<i32>>,
-    ks: ArrayView1<f32>,
-    potentials: ArrayView2<f32>,
-    filename: Str,
-) -> Result<(), String> {
+fn write_output<Str: AsRef<str>>(runresult: &RunResult, filename: Str) -> Result<(), String> {
     let mut npz =
         NpzWriter::new_compressed(File::create(filename.as_ref()).map_err(|x| x.to_string())?);
-    npz.add_array("energies", &energies)
+    npz.add_array("actions", &runresult.actions)
         .map_err(|x| x.to_string())?;
-    if let Some(windings) = windings {
-        npz.add_array("windings", &windings)
+    if let Some(windings) = runresult.windings.as_ref() {
+        npz.add_array("windings", windings)
             .map_err(|x| x.to_string())?;
     }
-    npz.add_array("ks", &ks).map_err(|x| x.to_string())?;
-    npz.add_array("potentials", &potentials)
+    npz.add_array("ks", &runresult.ks)
         .map_err(|x| x.to_string())?;
+    npz.add_array("replica_ks", &runresult.replica_ks)
+        .map_err(|x| x.to_string())?;
+    npz.add_array("potentials", &runresult.potentials)
+        .map_err(|x| x.to_string())?;
+    if let Some(mus) = runresult.mus.as_ref() {
+        npz.add_array("mus", mus).map_err(|x| x.to_string())?;
+    }
+    if let Some(replica_mus) = runresult.replica_mus.as_ref() {
+        npz.add_array("replica_mus", replica_mus)
+            .map_err(|x| x.to_string())?;
+    }
+    if let Some(parallel_debug) = runresult.state.get_parallel_tracking() {
+        let nreplicas = runresult.replica_ks.shape()[0];
+        let mut result = Array2::zeros((nreplicas, nreplicas));
+        parallel_debug
+            .into_iter()
+            .for_each(|((a, b), (succ, att))| {
+                result[[*a, *b]] = (*succ as f32) / (*att as f32);
+                result[[*b, *a]] = result[[*a, *b]];
+            });
+        npz.add_array("tempering", &result)
+            .map_err(|x| x.to_string())?;
+    }
     npz.finish().map_err(|x| x.to_string())?;
     Ok(())
 }
@@ -292,14 +409,8 @@ fn main() -> Result<(), String> {
 
     log::debug!("Config: {:?}", args);
 
-    let (energies, winding, ks, potentials) = run(&args).map_err(|x| x.to_string())?;
-    write_output(
-        energies.view(),
-        winding.as_ref().map(|x| x.view()),
-        ks.view(),
-        potentials.view(),
-        &args.output,
-    )?;
+    let result = run(&args).map_err(|x| x.to_string())?;
+    write_output(&result, &args.output)?;
 
     Ok(())
 }
