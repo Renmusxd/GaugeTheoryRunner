@@ -1,9 +1,9 @@
 use crate::StepAction::{GlobalUpdate, LocalUpdate, ParallelTempering};
-use chrono::Local;
+
 use clap::Parser;
-use env_logger::Builder;
+
 use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
-use log::LevelFilter;
+
 use ndarray::{s, Array1, Array2, Array3, Array6, ArrayView1, ArrayView2, ArrayView3, Axis};
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
@@ -12,7 +12,6 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
-use std::io::Write;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -40,13 +39,13 @@ struct Args {
     khigh: f32,
     #[arg(long, default_value_t = 10)]
     log_every: usize,
-    #[arg(long, default_value_t = Potential::villain)]
+    #[arg(long, default_value = "villain")]
     potential_type: Potential,
     #[arg(long, default_value_t = 32)]
     potential_values: usize,
     #[arg(long, default_value = None)]
     cap_potentials: Option<f32>,
-    #[arg(short, long, default_value_t = String::from("out.npz"))]
+    #[arg(short, long, default_value = "out.npz")]
     output: String,
     #[arg(long, default_value_t = false)]
     output_winding: bool,
@@ -59,18 +58,19 @@ struct Args {
 }
 
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all_fields = "kebab-case")]
 enum Potential {
     #[default]
-    villain,
-    cosine,
-    binary,
+    Villain,
+    Cosine,
+    Binary,
 }
 
 impl Potential {
     fn eval(&self, n: u32, k: f32) -> f32 {
         match self {
-            Potential::villain => k * n.pow(2) as f32,
-            Potential::cosine => {
+            Potential::Villain => k * n.pow(2) as f32,
+            Potential::Cosine => {
                 if n == 0 {
                     0.0
                 } else {
@@ -82,7 +82,7 @@ impl Potential {
                     res as f32
                 }
             }
-            Potential::binary => match n {
+            Potential::Binary => match n {
                 0 => 0.0,
                 1 => k,
                 _ => 1000.,
@@ -244,7 +244,7 @@ fn steps<R: Rng>(
                 LocalUpdate => state.run_local_update_sweep()?,
                 GlobalUpdate => state.run_global_update_sweep()?,
                 ParallelTempering => {
-                    state.parallel_tempering_step(if i % 2 == 0 { &perms_a } else { &perms_b })?
+                    state.parallel_tempering_step(if i % 2 == 0 { perms_a } else { perms_b })?
                 }
             }
         }
