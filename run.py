@@ -1,9 +1,11 @@
 import subprocess
 import os
 import datetime
+import sys
 
 if __name__ == "__main__":
-    basedir = "outputs/villain/"
+    potential = sys.argv[1]
+    basedir = f"outputs/{potential}/"
     Ls = [4, 6, 8, 10, 12, 16, 20, 24, 28]
     klows = [0.75, 0.76, 0.77, 0.775]
     khighs = [0.85, 0.79, 0.78, 0.777]
@@ -27,7 +29,7 @@ if __name__ == "__main__":
 
             with open(logfile, "w") as f:
                 subprocess.run(["cargo", "run", "--release", "--",
-                                "--klow", str(klow), "--khigh", str(khigh),
+                                "--klow", str(klow), "--khigh", str(khigh), "--potential", potential,
                                 "-r", "64", "-N", "2000", "-w", "100", "-L", str(l),
                                 "--config-output", configfile, "--output-winding",
                                 "-o", outputfile], stdout=f, stderr=subprocess.STDOUT)
