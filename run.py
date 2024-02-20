@@ -1,5 +1,6 @@
 import subprocess
 import os
+import datetime
 
 if __name__ == "__main__":
     basedir = "outputs/villain/"
@@ -14,7 +15,11 @@ if __name__ == "__main__":
             klowstr = str(klow).replace('.', '')
             khighstr = str(khigh).replace('.', '')
             filetemp = f"out-k{klowstr}-k{khighstr}"
-            print(f"\t{filetemp}")
+
+            now = datetime.datetime.now()
+            nowstr = now.strftime('%Y-%m-%d %H:%M:%S')
+
+            print(f"{nowstr}\t{filetemp}")
 
             configfile = os.path.join(lbasedir, filetemp + ".yaml")
             outputfile = os.path.join(lbasedir, filetemp + ".npz")
