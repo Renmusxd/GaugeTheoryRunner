@@ -13,9 +13,9 @@ if __name__ == "__main__":
     iter_factor = 4
     iterations = 5
     replicas = 64
-    samples = 2000
-    warmup = 100
-    stepspersample = 100
+    samples = 1024
+    warmup = 128
+    stepspersample = 32
 
     for l in Ls:
         print(f"Running on L={l}")
