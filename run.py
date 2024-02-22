@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
             with open(logfile, "w") as f:
                 subprocess.run(["cargo", "run", "--release", "--",
-                                "--klow", str(klow), "--khigh", str(khigh), "--potential", potential,
+                                "--klow", str(klow), "--khigh", str(khigh), "--potential-type", potential,
                                 "-r", "64", "-N", "2000", "-w", "100", "-L", str(l),
                                 "--config-output", configfile, "--output-winding",
                                 "-o", outputfile], stdout=f, stderr=subprocess.STDOUT)
