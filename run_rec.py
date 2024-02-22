@@ -6,7 +6,7 @@ import numpy
 
 if __name__ == "__main__":
     potential = sys.argv[1]
-    basedir = sys.argv[2]
+    basedir = os.path.abspath(sys.argv[2])
     Ls_str = sys.argv[3:]
     Ls = [int(L) for L in Ls_str]
     klow = 0.5
