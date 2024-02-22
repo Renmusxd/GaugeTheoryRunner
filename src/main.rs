@@ -2,10 +2,10 @@ use crate::StepAction::{GlobalUpdate, LocalUpdate, ParallelTempering};
 
 use clap::Parser;
 
-use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
+use gaugemc::{CudaBackend, CudaError, SiteIndex};
 
 use ndarray::{
-    s, Array0, Array1, Array2, Array3, Array6, ArrayView1, ArrayView2, ArrayView3, Axis,
+    s, Array1, Array2, Array3, Axis,
 };
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
