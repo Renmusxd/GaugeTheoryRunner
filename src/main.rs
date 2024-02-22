@@ -192,7 +192,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
         args.chemical_potential_replicas
             .map(|_| replica_mus.clone()),
     )
-    .map_err(|x| x.to_string())?;
+        .map_err(|x| x.to_string())?;
     state.set_parallel_tracking(args.output_tempering_debug);
 
     let mut rng = rand::thread_rng();
@@ -267,7 +267,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-        .map_err(|x| x.to_string())?;
+            .map_err(|x| x.to_string())?;
     }
     log::info!("Done!");
 
@@ -297,7 +297,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-        .map_err(|x| x.to_string())?;
+            .map_err(|x| x.to_string())?;
 
         let energies = state.get_action_per_replica().map_err(|x| x.to_string())?;
         let mut sample = action_output.index_axis_mut(Axis(0), sample_number);
@@ -395,13 +395,19 @@ fn main() -> Result<(), String> {
     env_logger::init();
 
     let mut args = Args::parse();
+    let original_output = args.output.clone();
+    let original_config_output = args.config_output.clone();
 
     if let Some(config_input) = args.config_input.clone() {
         log::debug!("Reading config file from {}", config_input);
         let f = File::open(&config_input).map_err(|x| x.to_string())?;
         args = serde_yaml::from_reader(f).map_err(|x| x.to_string())?;
         args.config_input = Some(config_input);
-    } else if let Some(config_output) = &args.config_output {
+    }
+    args.output = original_output;
+    args.config_output = original_config_output;
+
+    if let Some(config_output) = &args.config_output {
         log::debug!("Writing config file to {}", config_output);
         let f = File::create(config_output).map_err(|x| x.to_string())?;
         serde_yaml::to_writer(f, &args).map_err(|x| x.to_string())?;
