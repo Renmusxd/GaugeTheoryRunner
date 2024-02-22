@@ -4,7 +4,7 @@ import datetime
 import sys
 
 if __name__ == "__main__":
-    potential = sys.argv[1]
+    potential = "villain"
     basedir = f"outputs/{potential}/"
     Ls = [4, 6, 8, 10, 12, 16, 20, 24, 28]
     klows = [0.75, 0.76, 0.77, 0.775]
