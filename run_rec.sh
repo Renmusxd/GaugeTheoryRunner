@@ -13,9 +13,9 @@ module load python3
 
 OUTPUT_DIR=$1
 
-mkdir OUTPUT_DIR
-cd OUTPUT_DIR || exit
-export WD=OUTPUT_DIR
+mkdir $OUTPUT_DIR
+cd $OUTPUT_DIR || exit
+export WD=$OUTPUT_DIR
 
 # Output a lot of GPU details
 echo "Running GPU checking code"
@@ -24,7 +24,7 @@ nvidia-smi -L
 nvidia-smi -q
 
 echo "Cloning Repo into directory"
-git clone git@github.com:Renmusxd/GaugeTheoryRunner.git
+git clone --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
 cd GaugeTheoryRunner || exit
 cargo build --release
 
@@ -38,9 +38,7 @@ export RUST_BACKTRACE=full
 export RUST_LOG=info
 
 POTENTIAL=$2
-OUTPUT_SUB=$3
-
-echo "Running $EXE run_rec.py $POTENTIAL \"../${OUTPUT_SUB}\" \"${@:4}\" "
-$EXE run_rec.py $POTENTIAL "../${OUTPUT_SUB}" "${@:4}"
+echo "Running $EXE run_rec.py ..$POTENTIAL \"../$POTENTIAL\" \"${@:3}\""
+$EXE run_rec.py $POTENTIAL "../$POTENTIAL" "${@:3}"
 
 cargo clean
