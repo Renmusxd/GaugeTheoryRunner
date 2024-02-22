@@ -9,6 +9,7 @@ if __name__ == "__main__":
     basedir = os.path.abspath(sys.argv[2])
     Ls_str = sys.argv[3:]
     Ls = [int(L) for L in Ls_str]
+    print(f"Running for L in {Ls}")
     klow = 0.5
     khigh = 1.5
     iter_factor = 4
