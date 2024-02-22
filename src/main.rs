@@ -379,7 +379,7 @@ fn write_output<Str: AsRef<str>>(runresult: &RunResult, filename: Str) -> Result
         let nreplicas = runresult.replica_ks.shape()[0];
         let mut result = Array2::zeros((nreplicas, nreplicas));
         parallel_debug
-            .into_iter()
+            .iter()
             .for_each(|((a, b), (succ, att))| {
                 result[[*a, *b]] = (*succ as f32) / (*att as f32);
                 result[[*b, *a]] = result[[*a, *b]];
