@@ -6,10 +6,11 @@ import numpy
 
 if __name__ == "__main__":
     potential = sys.argv[1]
-    basedir = f"outputs/rec/{potential}/"
-    Ls = [4, 6, 8, 10, 12, 16, 20, 24, 28, 32]
-    klow = 0.6
-    khigh = 1.4
+    basedir = sys.argv[2]
+    Ls_str = sys.argv[3:]
+    Ls = [int(L) for L in Ls_str]
+    klow = 0.5
+    khigh = 1.5
     iter_factor = 4
     iterations = 5
     replicas = 64
