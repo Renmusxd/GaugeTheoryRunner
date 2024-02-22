@@ -404,6 +404,7 @@ fn main() -> Result<(), String> {
         args = serde_yaml::from_reader(f).map_err(|x| x.to_string())?;
         args.config_input = Some(config_input);
     }
+    log::debug!("Overwriting outputs: {} -> {} \t {:?} -> {:?}", args.output, original_output, args.config_output, original_config_output);
     args.output = original_output;
     args.config_output = original_config_output;
 
