@@ -38,7 +38,7 @@ export RUST_BACKTRACE=full
 export RUST_LOG=info
 
 POTENTIAL=$2
-echo "Running $EXE run_rec.py ..$POTENTIAL \"../$POTENTIAL\" \"${@:3}\""
+echo "Running $EXE run_rec.py $POTENTIAL \"../$POTENTIAL\" \"${@:3}\""
 $EXE run_rec.py $POTENTIAL "../$POTENTIAL" "${@:3}"
 
 cargo clean
