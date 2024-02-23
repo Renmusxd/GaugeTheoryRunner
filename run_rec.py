@@ -5,9 +5,10 @@ import sys
 import numpy
 
 if __name__ == "__main__":
-    device_id = os.getenv("CUDA_VISIBLE_DEVICES")
+    device_id = os.getenv("SET_CUDA_DEVICE")
     if device_id:
-        device_arr = ["--device-id", device_id]
+        device_id = int(device_id)
+        device_arr = ["--device-id", str(device_id)]
     else:
         device_arr = []
     potential = sys.argv[1]

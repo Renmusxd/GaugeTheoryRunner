@@ -4,7 +4,7 @@ import datetime
 import sys
 
 if __name__ == "__main__":
-    device_id = os.getenv("CUDA_VISIBLE_DEVICES")
+    device_id = os.getenv("SET_CUDA_DEVICE")
     if device_id:
         device_arr = ["--device-id", device_id]
     else:
