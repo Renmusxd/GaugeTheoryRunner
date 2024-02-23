@@ -23,9 +23,16 @@ nvidia-smi --list-gpus
 nvidia-smi -L
 nvidia-smi -q
 
-echo "Cloning Repo into directory"
-git clone --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
-cd GaugeTheoryRunner || exit
+if [ -d GaugeTheoryRunner ]; then
+  echo "Updating Repo"
+  cd GaugeTheoryRunner || exit
+  git pull
+else
+  echo "Cloning Repo into directory"
+  git clone --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
+  cd GaugeTheoryRunner || exit
+fi
+
 cargo build --release
 
 # Now run main thing
