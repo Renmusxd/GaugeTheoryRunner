@@ -4,6 +4,11 @@ import datetime
 import sys
 
 if __name__ == "__main__":
+    device_id = os.getenv("CUDA_VISIBLE_DEVICES")
+    if device_id:
+        device_arr = ["--device-id", device_id]
+    else:
+        device_arr = []
     potential = "cosine"
     basedir = f"outputs/{potential}/"
     Ls = [4, 6, 8, 10, 12, 16, 20, 24, 28]
@@ -32,4 +37,4 @@ if __name__ == "__main__":
                                 "--klow", str(klow), "--khigh", str(khigh), "--potential-type", potential,
                                 "-r", "64", "-N", "2000", "-w", "100", "-L", str(l),
                                 "--config-output", configfile, "--output-winding",
-                                "-o", outputfile], stdout=f, stderr=subprocess.STDOUT)
+                                "-o", outputfile] + device_arr, stdout=f, stderr=subprocess.STDOUT)

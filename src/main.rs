@@ -63,6 +63,8 @@ struct Args {
     config_output: Option<String>,
     #[arg(long, default_value_t = false)]
     output_tempering_debug: bool,
+    #[arg(long, default_value = None)]
+    device_id: Option<usize>,
 }
 
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
@@ -188,7 +190,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
         vns.clone(),
         None,
         None,
-        None,
+        args.device_id,
         args.chemical_potential_replicas
             .map(|_| replica_mus.clone()),
     )

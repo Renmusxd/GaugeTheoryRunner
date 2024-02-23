@@ -5,6 +5,11 @@ import sys
 import numpy
 
 if __name__ == "__main__":
+    device_id = os.getenv("CUDA_VISIBLE_DEVICES")
+    if device_id:
+        device_arr = ["--device-id", device_id]
+    else:
+        device_arr = []
     potential = sys.argv[1]
     basedir = os.path.abspath(sys.argv[2])
     Ls_str = sys.argv[3:]
@@ -41,7 +46,7 @@ if __name__ == "__main__":
                                 "-w", str(warmup), "-L", str(l),
                                 "-s", str(stepspersample),
                                 "--config-output", configfile, "--output-winding",
-                                "-o", outputfile], stdout=f, stderr=subprocess.STDOUT)
+                                "-o", outputfile] + device_arr, stdout=f, stderr=subprocess.STDOUT)
 
             arr = numpy.load(outputfile)
             ks = arr["ks"]
