@@ -40,13 +40,15 @@ if __name__ == "__main__":
             logfile = os.path.join(lbasedir, filetemp + ".log")
 
             with open(logfile, "w") as f:
-                subprocess.run(["cargo", "run", "--release", "--",
-                                "--klow", str(klow), "--khigh", str(khigh), "--potential-type", potential,
-                                "-r", str(replicas), "-N", str(samples),
-                                "-w", str(warmup), "-L", str(l),
-                                "-s", str(stepspersample),
-                                "--config-output", configfile, "--output-winding",
-                                "-o", outputfile] + device_arr, stdout=f, stderr=subprocess.STDOUT)
+                cmd = ["cargo", "run", "--release", "--",
+                       "--klow", str(klow), "--khigh", str(khigh), "--potential-type", potential,
+                       "-r", str(replicas), "-N", str(samples),
+                       "-w", str(warmup), "-L", str(l),
+                        "-s", str(stepspersample),
+                       "--config-output", configfile, "--output-winding",
+                       "-o", outputfile] + device_arr
+                print("Running " + " ".join(cmd))
+                subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT)
 
             arr = numpy.load(outputfile)
             ks = arr["ks"]
