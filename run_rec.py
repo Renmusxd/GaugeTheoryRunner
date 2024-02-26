@@ -16,8 +16,8 @@ if __name__ == "__main__":
     Ls_str = sys.argv[3:]
     Ls = [int(L) for L in Ls_str]
     print(f"Running for L in {Ls}")
-    klow = 0.5
-    khigh = 1.5
+    o_klow = 0.5
+    o_khigh = 1.5
     iter_factor = 4
     iterations = 5
     replicas = 64
@@ -26,6 +26,8 @@ if __name__ == "__main__":
     stepspersample = 32
 
     for l in Ls:
+        khigh = o_khigh
+        klow = o_klow
         print(f"Running on L={l}")
         lbasedir = os.path.join(basedir, f"L={l}")
         os.makedirs(lbasedir, exist_ok=True)
