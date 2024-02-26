@@ -56,8 +56,13 @@ if __name__ == "__main__":
             arr = numpy.load(outputfile)
             ks = arr["ks"]
             x = arr["actions"]
+
+            grad_x = numpy.gradient(x.mean(axis=0), ks)
+            peak_k = ks[numpy.argmax(numpy.abs(grad_x))]
+
             vx = numpy.array([xx.var() / (l ** 4) for xx in x.T])
-            peak_k = ks[numpy.argmax(vx)]
+            peak_k_var = ks[numpy.argmax(vx)]
+            print(f"Peak gradient at k={peak_k:.5f} \t Peak variance at k={peak_k_var:.5f}")
             krange = khigh - klow
 
             klow = numpy.round(peak_k - (krange / (2 * iter_factor)), iternum + 2)
