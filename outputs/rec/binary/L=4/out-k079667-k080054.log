@@ -1,0 +1,2 @@
+    Finished release [optimized] target(s) in 0.05s
+     Running `target/release/gauge_mc_runner --klow 0.79667 --khigh 0.80054 --potential-type binary -r 64 -N 128 -w 128 -L 4 -s 32 --config-output /home/sumner/source/GaugeTheoryRunner/outputs/rec/binary/L=4/out-k079667-k080054.yaml --output-winding -o /home/sumner/source/GaugeTheoryRunner/outputs/rec/binary/L=4/out-k079667-k080054.npz`
