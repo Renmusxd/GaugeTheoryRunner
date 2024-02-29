@@ -6,7 +6,7 @@
 #$ -l h_rt=48:00:00
 #$ -l h_vmem=4096M
 #$ -l gpus=1
-#$ -l gpu_c=6.0
+#$ -l gpu_memory=4096M
 
 module load cuda
 module load python3
