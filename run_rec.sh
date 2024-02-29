@@ -34,6 +34,7 @@ else
 fi
 
 cargo build --release
+RUSTEXE="target/release/gauge_mc_runner"
 
 # Now run main thing
 echo "Running python code"
@@ -45,7 +46,11 @@ export RUST_BACKTRACE=full
 export RUST_LOG=info
 
 POTENTIAL=$2
-echo "Running $EXE run_rec.py $POTENTIAL \"../$POTENTIAL\" \"${@:3}\""
-$EXE run_rec.py $POTENTIAL "../$POTENTIAL" "${@:3}"
+
+$EXE run_rec.py --potential_type=$POTENTIAL \
+    --output_directory "../$POTENTIAL" \
+    --system_sizes "${@:3}" \
+    --disable_global_moves \
+    --executable $RUSTEXE
 
 cargo clean
