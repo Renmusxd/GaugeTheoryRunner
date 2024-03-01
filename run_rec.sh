@@ -33,7 +33,7 @@ else
   cd GaugeTheoryRunner || exit
 fi
 
-cargo build --release
+cargo build --release -j 1
 RUSTEXE="target/release/gauge_mc_runner"
 
 # Now run main thing
