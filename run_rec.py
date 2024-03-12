@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('--potential_type', choices=["villain", "cosine", "binary"], default="villain")
     parser.add_argument('--peak_choice', choices=["gradient", "variance"], default="gradient")
     parser.add_argument('--system_sizes', metavar='L', type=int, nargs='+', help='System sizes to run across')
-    parser.add_argument('--device_id', type=int, help="Cuda device id to run on")
+    parser.add_argument('--device_id', type=int, help="Cuda device id to run on", default=None)
     parser.add_argument("--klow", default=0.5, type=float, help="Initial value of klow")
     parser.add_argument("--khigh", default=1.5, type=float, help="Initial value of khigh")
     parser.add_argument("--iter_factor", default=4, type=int, help="Zoom factor for ks each iteration")
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     warmup = args.warmup
     stepspersample = args.steps_per_sample
 
-    if device_id:
+    if device_id is not None:
         device_id = int(device_id)
         device_arr = ["--device-id", str(device_id)]
     else:
