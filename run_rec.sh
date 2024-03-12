@@ -6,9 +6,10 @@
 #$ -l h_rt=12:00:00
 #$ -l h_vmem=4096M
 #$ -l gpus=1
+#$ -l gpu_c=6.0
 #$ -l gpu_memory=2048M
 
-module load cuda/11.8
+module load cuda/12.2
 module load python3/3.10.12
 
 OUTPUT_DIR=$1
@@ -54,6 +55,6 @@ $EXE run_rec.py --potential_type=$POTENTIAL \
     --system_sizes "${@:3}" \
     --disable_global_moves \
     --executable $RUSTEXE \
-    --device_id $CUDA_VISIBLE_DEVICES
+    --device_id 0
 
 cargo clean
