@@ -4,10 +4,8 @@
 #$ -m ea
 #$ -M sumnerh@bu.edu
 #$ -l h_rt=12:00:00
-#$ -l h_vmem=4096M
 #$ -l gpus=1
 #$ -l gpu_c=6.0
-#$ -l gpu_memory=2048M
 
 module load cuda/12.2
 module load python3/3.10.12
@@ -34,10 +32,10 @@ else
   cd GaugeTheoryRunner || exit
 fi
 
-cargo build -j 1
-RUSTEXE="target/debug/gauge_mc_runner"
-#cargo build --release -j 1
-#RUSTEXE="target/release/gauge_mc_runner"
+#cargo build -j 1
+#RUSTEXE="target/debug/gauge_mc_runner"
+cargo build --release -j 1
+RUSTEXE="target/release/gauge_mc_runner"
 
 # Now run main thing
 echo "Running python code"
