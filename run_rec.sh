@@ -48,24 +48,14 @@ export RUST_LOG=info
 
 POTENTIAL=$2
 
-if [ -z "${SGE_TASK_ID}" ]; then
-  TASK_INDEX="$((SGE_TASK_ID-1))"
-  echo "Running task index: $TASK_INDEX"
-  $EXE run_rec.py --potential_type=$POTENTIAL \
-      --output_directory "../$POTENTIAL" \
-      --system_sizes "${@:3}" \
-      --disable_global_moves \
-      --executable $RUSTEXE \
-      --device_id 0 \
-      --task_id "$TASK_INDEX"
-else
-  echo "Running without tasks"
-  $EXE run_rec.py --potential_type=$POTENTIAL \
-      --output_directory "../$POTENTIAL" \
-      --system_sizes "${@:3}" \
-      --disable_global_moves \
-      --executable $RUSTEXE \
-      --device_id 0
-fi
+TASK_INDEX="$((SGE_TASK_ID-1))"
+echo "Running task index: $TASK_INDEX"
+$EXE run_rec.py --potential_type=$POTENTIAL \
+    --output_directory "../$POTENTIAL" \
+    --system_sizes "${@:3}" \
+    --disable_global_moves \
+    --executable $RUSTEXE \
+    --device_id 0 \
+    --task_id "$TASK_INDEX"
 
 cargo clean
