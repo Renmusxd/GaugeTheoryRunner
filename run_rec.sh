@@ -38,7 +38,7 @@ else
 fi
 
 cargo build --release -j ${NSLOTS:-1}
-cd ../..
+cd ../../..
 RUSTEXE="$OWNDIR/GaugeTheoryRunner/target/release/gauge_mc_runner"
 PYTHONEXE="$OWNDIR/GaugeTheoryRunner/run_rec.py"
 
