@@ -30,11 +30,10 @@ if [ -d GaugeTheoryRunner ]; then
   echo "Updating Repo"
   cd GaugeTheoryRunner || exit
   git pull
-  # git checkout nodata
+  git checkout nodata
 else
   echo "Cloning Repo into directory"
-  # git clone -b nodata --single-branch --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
-  git clone --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
+  git clone -b nodata --single-branch --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
   cd GaugeTheoryRunner || exit
 fi
 
