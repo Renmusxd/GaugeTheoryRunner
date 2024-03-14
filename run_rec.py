@@ -5,15 +5,15 @@ import sys
 import numpy
 import argparse
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            prog='Recursive Gauge Runner',
-            description='Zooms in recursively on the phase transition region')
-    parser.add_argument('--output_directory')
+        prog='Recursive Gauge Runner',
+        description='Zooms in recursively on the phase transition region')
+    parser.add_argument('--output_directory', default=".")
     parser.add_argument('--potential_type', choices=["villain", "cosine", "binary"], default="villain")
     parser.add_argument('--peak_choice', choices=["gradient", "variance"], default="gradient")
-    parser.add_argument('--system_sizes', metavar='L', type=int, nargs='+', help='System sizes to run across')
+    parser.add_argument('--system_sizes', metavar='L', type=int, nargs='+', default=[4, 6, 8],
+                        help='System sizes to run across')
     parser.add_argument('--device_id', type=int, help="Cuda device id to run on", default=None)
     parser.add_argument("--klow", default=0.5, type=float, help="Initial value of klow")
     parser.add_argument("--khigh", default=1.5, type=float, help="Initial value of khigh")
@@ -22,14 +22,17 @@ if __name__ == "__main__":
     parser.add_argument("--warmup", default=128, type=int, help="Number of warmup steps before sampling")
     parser.add_argument("--replicas", default=64, type=int, help="Number of replicas in array")
     parser.add_argument("--samples", default=1024, type=int, help="Number of samples to take for each klow-khigh")
-    parser.add_argument("--steps_per_sample", default=32, type=int,help="Number of steps between samples")
-    parser.add_argument("--disable_global_moves", action="store_true", help="Disable global moves to be included", default=False)
+    parser.add_argument("--steps_per_sample", default=32, type=int, help="Number of steps between samples")
+    parser.add_argument('--task_id', default=None, type=int, help="Task id if system sizes should be broken into tasks")
     parser.add_argument("--executable", help="Replace cargo-run with an executable")
     parser.add_argument('--log_to_file', action="store_true", help="Enable file logging")
+    parser.add_argument("--disable_global_moves", action="store_true", help="Disable global moves to be included",
+                        default=False)
+
     args = parser.parse_args()
 
     print("Running recursive with:")
-    for k,v in vars(args).items():
+    for k, v in vars(args).items():
         print(f"{k}\t{v}")
     print("=====")
 
@@ -62,6 +65,9 @@ if __name__ == "__main__":
         executable = [args.executable]
     else:
         executable = ["cargo", "run", "--release", "--"]
+
+    if args.task_id is not None:
+        Ls = [Ls[args.task_id]]
 
     for l in Ls:
         khigh = o_khigh
