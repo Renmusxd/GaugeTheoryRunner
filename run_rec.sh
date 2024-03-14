@@ -11,7 +11,7 @@ module load cuda/12.2
 module load python3/3.10.12
 
 OUTDIR=$1
-OUTPUT_DIR=$(realpath OUTDIR)
+OUTPUT_DIR=$(realpath $OUTDIR)
 
 echo "OUTPUT_DIR=$OUTPUT_DIR"
 
