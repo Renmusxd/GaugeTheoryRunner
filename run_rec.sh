@@ -10,7 +10,10 @@
 module load cuda/12.2
 module load python3/3.10.12
 
-OUTPUT_DIR=$1
+OUTDIR=$1
+OUTPUT_DIR=$(realpath OUTDIR)
+
+echo "OUTPUT_DIR=$OUTPUT_DIR"
 
 mkdir -p $OUTPUT_DIR
 cd $OUTPUT_DIR || exit
@@ -22,25 +25,30 @@ nvidia-smi --list-gpus
 nvidia-smi -L
 nvidia-smi -q
 
-OWNDIR="build/$JOB_ID.$SGE_TASK_ID"
-mkdir -p $OWNDIR
-cd $OWNDIR || exit
+OWNDIR="$OUTPUT_DIR/build/$JOB_ID.$SGE_TASK_ID"
+GITDIR="$OWNDIR/GaugeTheoryRunner"
 
+echo "OWNDIR=$OWNDIR"
+echo "GITDIR=$GITDIR"
+
+mkdir -p $OWNDIR
+
+cd $OWNDIR || exit
 if [ -d GaugeTheoryRunner ]; then
   echo "Updating Repo"
-  cd GaugeTheoryRunner || exit
+  cd "$GITDIR" || exit
   git pull
   git checkout nodata
 else
   echo "Cloning Repo into directory"
   git clone -b nodata --single-branch --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
-  cd GaugeTheoryRunner || exit
+  cd "$GITDIR" || exit
 fi
 
-cargo build --release -j ${NSLOTS:-1}
-cd ../../..
-RUSTEXE="$OWNDIR/GaugeTheoryRunner/target/release/gauge_mc_runner"
-PYTHONEXE="$OWNDIR/GaugeTheoryRunner/run_rec.py"
+cargo build --quiet --release -j ${NSLOTS:-1}
+cd $OUTPUT_DIR || exit
+RUSTEXE="$GITDIR/target/release/gauge_mc_runner"
+PYTHONEXE="$GITDIR/run_rec.py"
 
 # Now run main thing
 echo "Running python code"
@@ -74,5 +82,5 @@ $EXE $PYTHONEXE --potential_type=$POTENTIAL \
 --device_id 0 \
 --task_id "$TASK_INDEX"
 
-cd "$OWNDIR/GaugeTheoryRunner"
+cd $GITDIR || exit
 cargo clean
