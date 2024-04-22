@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 
-/// Simple program to greet a person
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -246,7 +245,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
 
         let perm_mus_b = (0..args.replicas_ks)
             .flat_map(|kr| {
-                (0..chemical_potential_replicas / 2).map(move |mur| {
+                (0..(chemical_potential_replicas - 1) / 2).map(move |mur| {
                     (
                         kr + (2 * mur + 1) * args.replicas_ks,
                         kr + (2 * (mur + 1)) * args.replicas_ks,
