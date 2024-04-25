@@ -33,6 +33,13 @@ cd "$OWNDIR" || exit
 
 RUSTEXE="$OWNDIR/GaugeTheoryRunner/target/release/gauge_mc_runner"
 
+echo "
+RUST_LOG=info $RUSTEXE \
+ -r 1024 -L $L -N 1024 -s 32 -w 1024 \
+  --klow 0.25 --khigh 0.85 --output \"$OWNDIR/sweep.npz\" \
+  --output-winding --log-every 1
+"
+
 RUST_LOG=info $RUSTEXE \
  -r 1024 -L $L -N 1024 -s 32 -w 1024 \
   --klow 0.25 --khigh 0.85 --output "$OWNDIR/sweep.npz" \
