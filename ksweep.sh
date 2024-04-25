@@ -1,5 +1,5 @@
 #!/bin/sh -l
-#$ -N run_rec
+#$ -N ksweep
 #$ -cwd
 #$ -m ea
 #$ -M sumnerh@bu.edu
