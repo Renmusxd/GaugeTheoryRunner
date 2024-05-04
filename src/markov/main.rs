@@ -27,6 +27,8 @@ struct Args {
     num_samples: usize,
     #[arg(long, default_value_t = 128)]
     num_steps_per_sample: usize,
+    #[arg(long, default_value_t = 256)]
+    warmup_steps: usize,
 }
 
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
@@ -93,6 +95,11 @@ fn main() -> Result<(), CudaError> {
     )?;
 
     state.initialize_wilson_loops_for_probs_incremental_square((0..num_replicas).collect(), 0)?;
+
+    let num_steps = args.warmup_steps;
+    for _ in 0..num_steps {
+        state.run_local_update_sweep()?;
+    }
 
     let num_counts = args.num_samples;
     let num_steps = args.num_steps_per_sample;
