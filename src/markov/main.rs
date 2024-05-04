@@ -2,8 +2,8 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use clap::Parser;
 use log::info;
-use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
-use ndarray::{Array0, Array1, Array2, Array3, Array6, Axis, s};
+use gaugemc::{CudaBackend, CudaError, SiteIndex};
+use ndarray::{Array0, Array1, Array2};
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
 use serde::{Deserialize, Serialize};
@@ -71,7 +71,7 @@ impl Display for Potential {
 
 fn main() -> Result<(), CudaError> {
     env_logger::init();
-    let mut args = Args::parse();
+    let args = Args::parse();
 
     let d: usize = args.systemsize;
     let num_replicas = d.pow(2) + 1;
@@ -92,7 +92,7 @@ fn main() -> Result<(), CudaError> {
         None,
     )?;
 
-    state.initialize_wilson_loops_for_probs_incremental_square((0..num_replicas).map(|x| x).collect(), 0)?;
+    state.initialize_wilson_loops_for_probs_incremental_square((0..num_replicas).collect(), 0)?;
 
     let num_counts = args.num_samples;
     let num_steps = args.num_steps_per_sample;
