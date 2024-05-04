@@ -3,6 +3,10 @@ name = "gauge_mc_runner"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "markov"
+path = "src/markov/main.rs"
+
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 ndarray = "0.15"
