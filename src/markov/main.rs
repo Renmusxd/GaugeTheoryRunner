@@ -3,7 +3,7 @@ use std::fs::File;
 use clap::Parser;
 use log::info;
 use gaugemc::{CudaBackend, CudaError, SiteIndex};
-use ndarray::{Array0, Array1, Array2};
+use ndarray::{Array0, Array1, Array2, Array3, Axis};
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
 use serde::{Deserialize, Serialize};
@@ -103,23 +103,26 @@ fn main() -> Result<(), CudaError> {
 
     let num_counts = args.num_samples;
     let num_steps = args.num_steps_per_sample;
-    for i in 0..num_counts {
+
+    let mut all_transition_probs = Array3::zeros((args.num_samples, num_replicas, 2));
+    all_transition_probs.axis_iter_mut(Axis(0)).enumerate().try_for_each(|(i, mut x)| -> Result<(), CudaError> {
         info!("Computing count {}/{}", i, num_counts);
         for _ in 0..num_steps {
             state.run_local_update_sweep()?;
         }
-
+        state.reset_wilson_loop_transition_probs()?;
         state.calculate_wilson_loop_transition_probs()?;
-    }
-    let transition_probs = state.get_wilson_loop_transition_probs()?;
-
+        state.get_wilson_loop_transition_probs_into(x.as_slice_mut().unwrap())?;
+        Ok(())
+    })?;
+    let average_transition_probs = all_transition_probs.mean_axis(Axis(0)).unwrap();
     let mut distribution = Array1::zeros((num_replicas, ));
     let mut free_energies = Array1::zeros((num_replicas, ));
     let mut acc = 1.0;
     free_energies[0] = 0.0;
     distribution[0] = 1.0;
     for i in 1..num_replicas {
-        let new_logp = -free_energies[i - 1] + transition_probs[[i - 1, 1]].ln() as f64 - transition_probs[[i, 0]].ln() as f64;
+        let new_logp = -free_energies[i - 1] + (average_transition_probs[[i - 1, 1]] as f64).ln() - (average_transition_probs[[i, 0]] as f64).ln();
         free_energies[i] = -new_logp;
         distribution[i] = new_logp.exp();
         acc += distribution[i];
@@ -129,7 +132,8 @@ fn main() -> Result<(), CudaError> {
     let mut npz = NpzWriter::new(File::create(args.output).expect("Could not create file."));
     npz.add_array("L", &Array0::from_elem((), args.systemsize as u64)).expect("Could not add array to file.");
     npz.add_array("k", &Array0::from_elem((), args.k)).expect("Could not add array to file.");
-    npz.add_array("transition_probs", &transition_probs).expect("Could not add array to file.");
+    npz.add_array("all_transition_probs", &all_transition_probs).expect("Could not add array to file.");
+    npz.add_array("transition_probs", &average_transition_probs).expect("Could not add array to file.");
     npz.add_array("sample_probs", &distribution).expect("Could not add array to file.");
     npz.add_array("free_energy", &free_energies).expect("Could not add array to file.");
     npz.finish().expect("Could not write to file.");
