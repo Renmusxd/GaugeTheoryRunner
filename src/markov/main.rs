@@ -33,9 +33,9 @@ struct Args {
     plaquette_type: u16,
     #[arg(long, default_value_t = true)]
     run_plane_shift_updates: bool,
-    #[arg(long, default_value_t = None)]
+    #[arg(long, default_value = None)]
     replica_index_low: Option<usize>,
-    #[arg(long, default_value_t = None)]
+    #[arg(long, default_value = None)]
     replica_index_high: Option<usize>,
 }
 
@@ -136,8 +136,8 @@ fn main() -> Result<(), CudaError> {
             Ok(())
         })?;
     let average_transition_probs = all_transition_probs.mean_axis(Axis(0)).unwrap();
-    let mut distribution = Array1::zeros((num_replicas,));
-    let mut free_energies = Array1::zeros((num_replicas,));
+    let mut distribution = Array1::zeros((num_replicas, ));
+    let mut free_energies = Array1::zeros((num_replicas, ));
     let mut acc = 1.0;
     free_energies[0] = 0.0;
     distribution[0] = 1.0;
@@ -159,7 +159,7 @@ fn main() -> Result<(), CudaError> {
         "replica_indices",
         &Array1::from_vec(replica_indices.into_iter().map(|x| x as u32).collect()),
     )
-    .expect("Could not add array to file.");
+        .expect("Could not add array to file.");
     npz.add_array("all_transition_probs", &all_transition_probs)
         .expect("Could not add array to file.");
     npz.add_array("transition_probs", &average_transition_probs)
