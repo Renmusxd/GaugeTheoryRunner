@@ -19,8 +19,11 @@ if __name__ == "__main__":
         for k in ks:
             filename = filename_template.format(system_size, str(int(k * 100)).zfill(3), num_samples)
             print(f"{nowstr}\tL={system_size}\tk={k:.3f}\t{filename}")
-            subprocess.run(["cargo", "run", "--release", "--bin", "markov", "--",
-                            "--systemsize", str(system_size),
-                            "-n", str(num_samples),
-                            "-k", str(k),
-                            "--output", filename])
+            if os.path.exists(filename):
+                print("\tAlready done!")
+            else:
+                subprocess.run(["cargo", "run", "--release", "--bin", "markov", "--",
+                                "--systemsize", str(system_size),
+                                "-n", str(num_samples),
+                                "-k", str(k),
+                                "--output", filename])
