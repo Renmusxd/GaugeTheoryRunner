@@ -22,4 +22,5 @@ if __name__ == "__main__":
             subprocess.run(["cargo", "run", "--release", "--bin", "markov", "--",
                             "--systemsize", str(system_size),
                             "-n", str(num_samples),
-                            "-k", str(k)])
+                            "-k", str(k),
+                            "--output", filename])
