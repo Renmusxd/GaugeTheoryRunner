@@ -4,9 +4,7 @@ use clap::Parser;
 
 use gaugemc::{CudaBackend, CudaError, SiteIndex};
 
-use ndarray::{
-    s, Array1, Array2, Array3, Axis,
-};
+use ndarray::{s, Array1, Array2, Array3, Axis};
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
 use rand::prelude::SliceRandom;
@@ -193,7 +191,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
         args.chemical_potential_replicas
             .map(|_| replica_mus.clone()),
     )
-        .map_err(|x| x.to_string())?;
+    .map_err(|x| x.to_string())?;
     state.set_parallel_tracking(args.output_tempering_debug);
 
     let mut rng = rand::thread_rng();
@@ -268,7 +266,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-            .map_err(|x| x.to_string())?;
+        .map_err(|x| x.to_string())?;
     }
     log::info!("Done!");
 
@@ -298,7 +296,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-            .map_err(|x| x.to_string())?;
+        .map_err(|x| x.to_string())?;
 
         let energies = state.get_action_per_replica().map_err(|x| x.to_string())?;
         let mut sample = action_output.index_axis_mut(Axis(0), sample_number);
@@ -379,12 +377,10 @@ fn write_output<Str: AsRef<str>>(runresult: &RunResult, filename: Str) -> Result
     if let Some(parallel_debug) = runresult.state.get_parallel_tracking() {
         let nreplicas = runresult.replica_ks.shape()[0];
         let mut result = Array2::zeros((nreplicas, nreplicas));
-        parallel_debug
-            .iter()
-            .for_each(|((a, b), (succ, att))| {
-                result[[*a, *b]] = (*succ as f32) / (*att as f32);
-                result[[*b, *a]] = result[[*a, *b]];
-            });
+        parallel_debug.iter().for_each(|((a, b), (succ, att))| {
+            result[[*a, *b]] = (*succ as f32) / (*att as f32);
+            result[[*b, *a]] = result[[*a, *b]];
+        });
         npz.add_array("tempering", &result)
             .map_err(|x| x.to_string())?;
     }
@@ -405,7 +401,13 @@ fn main() -> Result<(), String> {
         args = serde_yaml::from_reader(f).map_err(|x| x.to_string())?;
         args.config_input = Some(config_input);
     }
-    log::debug!("Overwriting outputs: {} -> {} \t {:?} -> {:?}", args.output, original_output, args.config_output, original_config_output);
+    log::debug!(
+        "Overwriting outputs: {} -> {} \t {:?} -> {:?}",
+        args.output,
+        original_output,
+        args.config_output,
+        original_config_output
+    );
     args.output = original_output;
     args.config_output = original_config_output;
 
