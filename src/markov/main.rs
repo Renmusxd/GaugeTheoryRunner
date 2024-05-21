@@ -31,6 +31,8 @@ struct Args {
     warmup_steps: usize,
     #[arg(long, default_value_t = 0)]
     plaquette_type: u16,
+    #[arg(long, default_value_t = true)]
+    run_plane_shift_updates: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
@@ -101,6 +103,9 @@ fn main() -> Result<(), CudaError> {
     let num_steps = args.warmup_steps;
     for _ in 0..num_steps {
         state.run_local_update_sweep()?;
+        if args.run_plane_shift_updates {
+            state.run_plane_shift(args.plaquette_type)?;
+        }
     }
 
     let num_counts = args.num_samples;
@@ -111,6 +116,9 @@ fn main() -> Result<(), CudaError> {
         info!("Computing count {}/{}", i, num_counts);
         for _ in 0..num_steps {
             state.run_local_update_sweep()?;
+            if args.run_plane_shift_updates {
+                state.run_plane_shift(args.plaquette_type)?;
+            }
         }
         state.reset_wilson_loop_transition_probs()?;
         state.calculate_wilson_loop_transition_probs()?;
