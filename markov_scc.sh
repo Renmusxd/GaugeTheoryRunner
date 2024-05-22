@@ -63,6 +63,7 @@ SYSTEM_SIZE=$2
 NUM_SAMPLES=$3
 STEPS_PER_SHARD=$4
 MAX_REPLICA_INDEX=$5
+POTENTIAL=$6
 
 TASK_INDEX="$((SGE_TASK_ID-1))"
 echo "Running task index: $TASK_INDEX"
@@ -74,7 +75,8 @@ $EXE \"$PYTHONEXE\" \
 --executable \"$RUSTEXE\" \
 --steps_per_shard \"$STEPS_PER_SHARD\" \
 --max_replica_index \"$MAX_REPLICA_INDEX\" \
---task_id \"$TASK_INDEX\"
+--task_id \"$TASK_INDEX\" \
+--potential \"$POTENTIAL\"
 "
 
 $EXE "$PYTHONEXE" \
@@ -83,7 +85,8 @@ $EXE "$PYTHONEXE" \
 --executable "$RUSTEXE" \
 --steps_per_shard "$STEPS_PER_SHARD" \
 --max_replica_index "$MAX_REPLICA_INDEX" \
---task_id "$TASK_INDEX"
+--task_id "$TASK_INDEX" \
+--potential "$POTENTIAL"
 
 cd "$GITDIR" || exit
 cargo clean

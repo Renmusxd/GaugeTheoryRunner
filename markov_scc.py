@@ -11,6 +11,7 @@ if __name__ == "__main__":
         description='Zooms in recursively on the phase transition region')
     parser.add_argument('--output_directory', default=".")
     parser.add_argument('--executable', default=None)
+    parser.add_argument('--potential_type', choices=["villain", "cosine", "binary"], default="villain")
     parser.add_argument('--system_size', metavar='L', type=int, default=8, help='System sizes to run across')
     parser.add_argument('--num_samples', metavar='N', type=int, default=1024, help='Number of samples to take')
     parser.add_argument('--steps_per_shard', metavar='S', type=int, default=None, help='Replica indices per shard')
@@ -80,6 +81,7 @@ if __name__ == "__main__":
                 "--systemsize", str(args.system_size),
                 "-n", str(args.num_samples),
                 "-k", str(k),
+                "--potential-type", args.potential_type,
                 "--output", filename,
                 "--replica-index-low", str(low),
                 "--replica-index-high", str(high)],
