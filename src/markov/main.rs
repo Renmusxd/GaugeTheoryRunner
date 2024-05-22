@@ -83,8 +83,11 @@ fn main() -> Result<(), CudaError> {
     env_logger::init();
     let args = Args::parse();
 
-    let d: usize = args.systemsize;
-    let num_replicas = d.pow(2) + 1;
+    let d = args.systemsize;
+    let replica_index_low = args.replica_index_low.unwrap_or(0);
+    let replica_index_high = args.replica_index_high.unwrap_or_else(|| d.pow(2) + 1);
+    let num_replicas = replica_index_high - replica_index_low;
+
     let mut vns = Array2::zeros((num_replicas, args.knum));
     ndarray::Zip::indexed(&mut vns).for_each(|(_, np), x| {
         *x = args.potential_type.eval(np as u32, args.k);
@@ -99,8 +102,6 @@ fn main() -> Result<(), CudaError> {
         None,
     )?;
 
-    let replica_index_low = args.replica_index_low.unwrap_or(0);
-    let replica_index_high = args.replica_index_high.unwrap_or(num_replicas);
     let replica_indices = (replica_index_low..replica_index_high).collect::<Vec<_>>();
     state.initialize_wilson_loops_for_probs_incremental_square(
         replica_indices.clone(),
