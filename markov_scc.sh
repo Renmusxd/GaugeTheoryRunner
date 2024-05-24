@@ -70,7 +70,7 @@ if [ "$DRY_RUN" != "true" ]; then
 fi
 
 cd $OUTPUT_DIR || exit
-RUSTEXE="$GITDIR/target/release/gauge_mc_runner"
+RUSTEXE="$GITDIR/target/release/markov"
 PYTHONEXE="$GITDIR/markov_scc.py"
 
 # Now run main thing
