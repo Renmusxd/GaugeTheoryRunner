@@ -23,7 +23,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.report_shards:
-        print("Running recursive with:")
+        print("Running markov with:")
         for k, v in vars(args).items():
             print(f"{k}\t{v}")
         print("=====")
@@ -79,8 +79,8 @@ if __name__ == "__main__":
         else:
             subprocess.run(executable + [
                 "--systemsize", str(args.system_size),
-                "-n", str(args.num_samples),
-                "-k", str(k),
+                "--num-samples", str(args.num_samples),
+                "--k", str(k),
                 "--potential-type", args.potential_type,
                 "--output", filename,
                 "--replica-index-low", str(low),
