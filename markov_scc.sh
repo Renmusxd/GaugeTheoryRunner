@@ -28,11 +28,11 @@ if [ "$SKIP_MODULE" != "true" ]; then
   module load python3/3.10.12
 fi
 
-OUTPUT_DIR=$(realpath "$OUTDIR")
+mkdir -p "$OUTDIR"
 
+OUTPUT_DIR=$(realpath "$OUTDIR")
 echo "OUTPUT_DIR=$OUTPUT_DIR"
 
-mkdir -p $OUTPUT_DIR
 cd $OUTPUT_DIR || exit
 export WD=$OUTPUT_DIR
 
