@@ -77,12 +77,13 @@ if __name__ == "__main__":
         if os.path.exists(filename):
             print("\tAlready done!")
         else:
-            subprocess.run(executable + [
+            command = executable + [
                 "--systemsize", str(args.system_size),
                 "--num-samples", str(args.num_samples),
                 "--k", str(k),
                 "--potential-type", args.potential_type,
                 "--output", filename,
                 "--replica-index-low", str(low),
-                "--replica-index-high", str(high)],
-                           env=new_environ)
+                "--replica-index-high", str(high)]
+            print(command)
+            subprocess.run(command, env=new_environ)
