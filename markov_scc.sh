@@ -13,6 +13,8 @@ NUM_SAMPLES=$3
 STEPS_PER_SHARD=$4
 MAX_REPLICA_INDEX=$5
 POTENTIAL=$6
+RUSTEXE=$(realpath "$7")
+PYTHONEXE=$(realpath "$8")
 
 echo "Run config
 OUTDIR=$OUTDIR
@@ -21,6 +23,8 @@ NUM_SAMPLES=$NUM_SAMPLES
 STEPS_PER_SHARD=$STEPS_PER_SHARD
 MAX_REPLICA_INDEX=$MAX_REPLICA_INDEX
 POTENTIAL=$POTENTIAL
+RUSTEXE=$RUSTEXE
+PYTHONEXE=$PYTHONEXE
 "
 
 if [ "$SKIP_MODULE" != "true" ]; then
@@ -44,34 +48,39 @@ if [ "$SKIP_GPU_CHECK" != "true" ]; then
   nvidia-smi -q
 fi
 
-OWNDIR="$OUTPUT_DIR/build/$JOB_ID.$SGE_TASK_ID"
-GITDIR="$OWNDIR/GaugeTheoryRunner"
+if [ -z "$RUSTEXE" ]; then
+  OWNDIR="$OUTPUT_DIR/build/$JOB_ID.$SGE_TASK_ID"
+  GITDIR="$OWNDIR/GaugeTheoryRunner"
 
-echo "OWNDIR=$OWNDIR"
-echo "GITDIR=$GITDIR"
+  echo "OWNDIR=$OWNDIR"
+  echo "GITDIR=$GITDIR"
 
-mkdir -p $OWNDIR
+  mkdir -p $OWNDIR
 
-cd $OWNDIR || exit
-if [ -d GaugeTheoryRunner ]; then
-  echo "Updating Repo"
-  cd "$GITDIR" || exit
-  git pull
-  git checkout nodata
-else
-  echo "Cloning Repo into directory"
-  git clone -b nodata --single-branch --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
-  cd "$GITDIR" || exit
+  cd $OWNDIR || exit
+  if [ -d GaugeTheoryRunner ]; then
+    echo "Updating Repo"
+    cd "$GITDIR" || exit
+    git pull
+    git checkout nodata
+  else
+    echo "Cloning Repo into directory"
+    git clone -b nodata --single-branch --depth 1 git@github.com:Renmusxd/GaugeTheoryRunner.git
+    cd "$GITDIR" || exit
+  fi
+
+
+  if [ "$DRY_RUN" != "true" ]; then
+    cargo build --quiet --release -j ${NSLOTS:-1}
+  fi
+
+  cd $OUTPUT_DIR || exit
+  RUSTEXE="$GITDIR/target/release/markov"
 fi
 
-
-if [ "$DRY_RUN" != "true" ]; then
-  cargo build --quiet --release -j ${NSLOTS:-1}
+if [ -z "$PYTHONEXE" ]; then
+  PYTHONEXE="$GITDIR/markov_scc.py"
 fi
-
-cd $OUTPUT_DIR || exit
-RUSTEXE="$GITDIR/target/release/markov"
-PYTHONEXE="$GITDIR/markov_scc.py"
 
 # Now run main thing
 echo "Running python code"
@@ -111,5 +120,7 @@ fi
 cd "$GITDIR" || exit
 
 if [ "$DRY_RUN" != "true" ]; then
-  cargo clean
+  if [ -z "$EXECUTABLE_PATH" ]; then
+    cargo clean
+  fi
 fi
