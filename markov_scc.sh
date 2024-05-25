@@ -16,6 +16,9 @@ POTENTIAL=$6
 RUSTEXE=$(realpath "$7")
 PYTHONEXE=$(realpath "$8")
 
+TASK_INDEX="$((SGE_TASK_ID-1))"
+echo "Running task index: $TASK_INDEX"
+
 echo "Run config
 OUTDIR=$OUTDIR
 SYSTEM_SIZE=$SYSTEM_SIZE
@@ -96,9 +99,6 @@ export RAYON_NUM_THREADS=${NSLOTS:-1}
 export RUST_BACKTRACE=full
 export RUST_LOG=info
 
-
-TASK_INDEX="$((SGE_TASK_ID-1))"
-echo "Running task index: $TASK_INDEX"
 
 echo "
 $EXE \"$PYTHONEXE\" \
