@@ -72,10 +72,15 @@ if [ -z "$RUSTEXE" ]; then
 
   if [ "$DRY_RUN" != "true" ]; then
     cargo build --quiet --release -j ${NSLOTS:-1}
+    CLEANUP="true"
+  else
+    CLEANUP="false"
   fi
 
   cd $OUTPUT_DIR || exit
   RUSTEXE="$GITDIR/target/release/markov"
+else
+  CLEANUP="false"
 fi
 
 if [ -z "$PYTHONEXE" ]; then
@@ -117,10 +122,7 @@ if [ "$DRY_RUN" != "true" ]; then
   --potential "$POTENTIAL"
 fi
 
-cd "$GITDIR" || exit
-
-if [ "$DRY_RUN" != "true" ]; then
-  if [ -z "$EXECUTABLE_PATH" ]; then
-    cargo clean
-  fi
+if [ "$CLEANUP" = "true" ]; then
+  cd "$GITDIR" || exit
+  cargo clean
 fi
