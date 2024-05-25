@@ -4,6 +4,7 @@ import datetime
 import sys
 import numpy
 import argparse
+import pickle
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -17,6 +18,11 @@ if __name__ == "__main__":
     parser.add_argument('--steps_per_shard', metavar='S', type=int, default=None, help='Replica indices per shard')
     parser.add_argument('--max_replica_index', metavar='M', type=int, default=None, help='System sizes to run across')
     parser.add_argument('--load_k_array', metavar='k', type=str, default=None, help='Load k from npz')
+    parser.add_argument('--load_replica_index_array', metavar='r', type=str, default=None,
+                        help='Load replica indices from npz')
+    parser.add_argument('--eval_k_array', type=str, default=None, help='Construct k array')
+    parser.add_argument('--eval_replica_index_array', type=str, default=None,
+                        help='Construct replica indices')
     parser.add_argument('--report_shards', action="store_true", default=False,
                         help='Report number of shards')
     parser.add_argument('--task_id', metavar='H', type=int, default=0, help='Task number')
@@ -29,24 +35,33 @@ if __name__ == "__main__":
         print("=====")
 
     if args.load_k_array:
-        ks = numpy.load(args.load_k_array)["ks"]
+        with open(args.load_k_array, "rb") as f:
+            ks = pickle.load(f)
+    elif args.eval_k_array:
+        ks = eval(args.eval_k_array)
     else:
         ks = list(numpy.arange(0.5, 0.7, 0.05)) + list(numpy.linspace(0.7, 0.9, 21)) + list(
             numpy.arange(0.95, 1.55, 0.05))
 
-    if args.max_replica_index:
-        max_replica_index = args.max_replica_index
+    if args.load_replica_index_array:
+        with open(args.load_replica_index_array, "rb") as f:
+            steps = pickle.load(f)
+    elif args.eval_replica_index_array:
+        steps = eval(args.eval_replica_index_array)
     else:
-        max_replica_index = args.system_size * args.system_size + 1
+        if args.max_replica_index:
+            max_replica_index = args.max_replica_index
+        else:
+            max_replica_index = args.system_size * args.system_size + 1
 
-    if args.steps_per_shard:
-        steps_per_shard = args.steps_per_shard
-    else:
-        steps_per_shard = max_replica_index
+        if args.steps_per_shard:
+            steps_per_shard = args.steps_per_shard
+        else:
+            steps_per_shard = max_replica_index
 
-    steps = list(range(0, max_replica_index, steps_per_shard))
-    if max_replica_index not in steps:
-        steps = steps + [max_replica_index]
+        steps = list(range(0, max_replica_index, steps_per_shard))
+        if max_replica_index not in steps:
+            steps = steps + [max_replica_index]
 
     shard_configs = [(k, low, high) for k in ks for (low, high) in zip(steps[:-1], steps[1:])]
 
