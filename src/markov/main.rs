@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser};
 use gaugemc::{CudaBackend, CudaError, SiteIndex};
 use log::info;
 use ndarray::{Array0, Array1, Array2, Array3, Axis};
@@ -39,13 +39,34 @@ struct Args {
     replica_index_high: Option<usize>,
 }
 
-#[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
-#[serde(rename_all_fields = "kebab-case")]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 enum Potential {
     #[default]
     Villain,
     Cosine,
     Binary,
+    Power(f32),
+}
+
+impl std::str::FromStr for Potential {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "villain" => Ok(Potential::Villain),
+            "cosine" => Ok(Potential::Cosine),
+            "binary" => Ok(Potential::Binary),
+            ss if ss.starts_with("power(") && ss.ends_with(")") => {
+                let arg = &ss[6..ss.len() - 1];
+                if let Ok(arg) = f32::from_str(arg) {
+                    Ok(Potential::Power(arg))
+                } else {
+                    Err(format!("Could not parse power float {}", arg))
+                }
+            }
+            _ => Err(format!("Potential {} not recognized", s))
+        }
+    }
 }
 
 impl Potential {
@@ -69,6 +90,9 @@ impl Potential {
                 1 => k,
                 _ => 1000.,
             },
+            Potential::Power(gamma) => {
+                (n as f32).abs().powf(*gamma)
+            }
         }
     }
 }
