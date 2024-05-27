@@ -69,6 +69,17 @@ impl std::str::FromStr for Potential {
     }
 }
 
+impl From<Potential> for u8 {
+    fn from(value: Potential) -> Self {
+        match value {
+            Potential::Villain => 0,
+            Potential::Cosine => 1,
+            Potential::Binary => 2,
+            Potential::Power(_) => 3,
+        }
+    }
+}
+
 impl Potential {
     fn eval(&self, n: u32, k: f32) -> f32 {
         match self {
@@ -178,8 +189,39 @@ fn main() -> Result<(), CudaError> {
     let mut npz = NpzWriter::new(File::create(args.output).expect("Could not create file."));
     npz.add_array("L", &Array0::from_elem((), args.systemsize as u64))
         .expect("Could not add array to file.");
+
+    npz.add_array("systemsize", &Array0::from_elem((), args.systemsize as u64))
+        .expect("Could not add array to file.");
     npz.add_array("k", &Array0::from_elem((), args.k))
         .expect("Could not add array to file.");
+    npz.add_array("knum", &Array0::from_elem((), args.k))
+        .expect("Could not add array to file.");
+    npz.add_array("potential", &Array0::from_elem((), u8::from(args.potential_type)))
+        .expect("Could not add array to file.");
+    npz.add_array("num_samples", &Array0::from_elem((), args.num_samples as u64))
+        .expect("Could not add array to file.");
+    npz.add_array("num_steps_per_sample", &Array0::from_elem((), args.num_steps_per_sample as u64))
+        .expect("Could not add array to file.");
+    npz.add_array("warmup_steps", &Array0::from_elem((), args.warmup_steps as u64))
+        .expect("Could not add array to file.");
+    npz.add_array("plaquette_type", &Array0::from_elem((), args.plaquette_type))
+        .expect("Could not add array to file.");
+    npz.add_array("run_plane_shift_updates", &Array0::from_elem((), args.run_plane_shift_updates))
+        .expect("Could not add array to file.");
+
+    if let Some(device_id) = args.device_id {
+        npz.add_array("device_id", &Array0::from_elem((), device_id as u64))
+            .expect("Could not add array to file.");
+    }
+    if let Some(replica_index_low) = args.replica_index_low {
+        npz.add_array("replica_index_low", &Array0::from_elem((), replica_index_low as u64))
+            .expect("Could not add array to file.");
+    }
+    if let Some(replica_index_high) = args.replica_index_high {
+        npz.add_array("replica_index_high", &Array0::from_elem((), replica_index_high as u64))
+            .expect("Could not add array to file.");
+    }
+
     npz.add_array(
         "replica_indices",
         &Array1::from_vec(replica_indices.into_iter().map(|x| x as u32).collect()),
