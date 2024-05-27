@@ -194,7 +194,7 @@ fn main() -> Result<(), CudaError> {
         .expect("Could not add array to file.");
     npz.add_array("k", &Array0::from_elem((), args.k))
         .expect("Could not add array to file.");
-    npz.add_array("knum", &Array0::from_elem((), args.k))
+    npz.add_array("knum", &Array0::from_elem((), args.knum as u64))
         .expect("Could not add array to file.");
     npz.add_array("potential", &Array0::from_elem((), u8::from(args.potential_type)))
         .expect("Could not add array to file.");
