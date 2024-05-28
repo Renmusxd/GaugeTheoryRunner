@@ -25,7 +25,7 @@ struct Args {
     device_id: Option<usize>,
     #[arg(short, long, default_value_t = 1024)]
     num_samples: usize,
-    #[arg(long, default_value_t = 128)]
+    #[arg(long, default_value_t = 16)]
     num_steps_per_sample: usize,
     #[arg(long, default_value_t = 256)]
     warmup_steps: usize,
