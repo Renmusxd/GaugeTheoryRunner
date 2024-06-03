@@ -87,7 +87,7 @@ else
 fi
 
 if [ -z "$PYTHONEXE" ]; then
-  PYTHONEXE="$GITDIR/markov_scc.py"
+  PYTHONEXE="$GITDIR/scripts/markov_scc.py"
 fi
 
 # Now run main thing
