@@ -48,7 +48,7 @@ fi
 cargo build --quiet --release -j ${NSLOTS:-1}
 cd $OUTPUT_DIR || exit
 RUSTEXE="$GITDIR/target/release/gauge_mc_runner"
-PYTHONEXE="$GITDIR/run_rec.py"
+PYTHONEXE="$GITDIR/scripts/run_rec.py"
 
 # Now run main thing
 echo "Running python code"
