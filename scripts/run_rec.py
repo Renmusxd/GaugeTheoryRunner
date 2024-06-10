@@ -28,6 +28,8 @@ if __name__ == "__main__":
     parser.add_argument('--log_to_file', action="store_true", help="Enable file logging")
     parser.add_argument("--disable_global_moves", action="store_true", help="Disable global moves to be included",
                         default=False)
+    parser.add_argument("--disable_output_winding", action="store_true", help="Disables logging windings",
+                        default=False)
 
     args = parser.parse_args()
 
@@ -69,6 +71,11 @@ if __name__ == "__main__":
     if args.task_id is not None:
         Ls = [Ls[args.task_id]]
 
+    if not args.disable_output_winding:
+        output_windings = ["--output-winding"]
+    else:
+        output_windings = []
+
     for l in Ls:
         khigh = o_khigh
         klow = o_klow
@@ -93,8 +100,7 @@ if __name__ == "__main__":
                                  "--systemsize", str(l),
                                  "--steps-per-sample", str(stepspersample),
                                  "--config-output", configfile,
-                                 "--output-winding",
-                                 "--output", outputfile]
+                                 "--output", outputfile] + output_windings
                    + device_arr + global_move_arr)
             print("Running " + " ".join(cmd))
             if args.log_to_file:
