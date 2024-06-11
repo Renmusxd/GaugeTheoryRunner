@@ -31,6 +31,8 @@ python scripts/run_rec.py --output_directory "${BASE_DIR}/${POTENTIAL}/w${w}" \
 --potential_type=villain \
 --iter_factor=4 \
 --iteration=10 \
+--disable_global_moves \
+--disable_output_winding \
 --background_winding=$w
 done
 
