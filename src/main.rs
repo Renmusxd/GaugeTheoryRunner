@@ -1,10 +1,10 @@
-use crate::StepAction::{GlobalUpdate, LocalUpdate, ParallelTempering};
+use crate::StepAction::{GlobalUpdate, LocalUpdate, ParallelTempering, PlaneShift};
 
 use clap::Parser;
 
-use gaugemc::{CudaBackend, CudaError, SiteIndex};
+use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
 
-use ndarray::{s, Array1, Array2, Array3, Axis};
+use ndarray::{s, Array1, Array2, Array3, Array6, Axis};
 use ndarray_npy::NpzWriter;
 use num_complex::Complex;
 use rand::prelude::SliceRandom;
@@ -28,6 +28,8 @@ struct Args {
     local_updates_per_step: usize,
     #[arg(short, long, default_value_t = 1)]
     global_updates_per_step: usize,
+    #[arg(short, long, default_value_t = 1)]
+    plane_shift_updates_per_step: usize,
     #[arg(short, long, default_value_t = 1)]
     tempering_updates_per_step: usize,
     #[arg(short, long, default_value_t = 100)]
@@ -54,6 +56,8 @@ struct Args {
     output: String,
     #[arg(long, default_value_t = false)]
     output_winding: bool,
+    #[arg(long, default_value = None, num_args = 0.., value_delimiter = ' ')]
+    background_winding: Option<Vec<i32>>,
     #[arg(long, default_value = None)]
     config_input: Option<String>,
     #[arg(long, default_value = None)]
@@ -109,6 +113,7 @@ enum StepAction {
     LocalUpdate,
     GlobalUpdate,
     ParallelTempering,
+    PlaneShift(u16),
 }
 
 struct RunResult {
@@ -177,6 +182,48 @@ fn run(args: &Args) -> Result<RunResult, String> {
         *x = mus[mur];
     });
 
+    let state = if let Some(background_windings) = args.background_winding.as_ref() {
+        let mut background_windings = background_windings.clone();
+        background_windings.extend((background_windings.len()..6).map(|_| 0));
+
+        let mut plaquettes = Array6::zeros((
+            vns.shape()[0],
+            args.systemsize,
+            args.systemsize,
+            args.systemsize,
+            args.systemsize,
+            6,
+        ));
+        plaquettes
+            .slice_mut(s![.., .., .., 0, 0, 0])
+            .iter_mut()
+            .for_each(|x| *x = background_windings[0]);
+        plaquettes
+            .slice_mut(s![.., .., 0, .., 0, 1])
+            .iter_mut()
+            .for_each(|x| *x = background_windings[1]);
+        plaquettes
+            .slice_mut(s![.., .., 0, 0, .., 2])
+            .iter_mut()
+            .for_each(|x| *x = background_windings[2]);
+        plaquettes
+            .slice_mut(s![.., 0, .., .., 0, 3])
+            .iter_mut()
+            .for_each(|x| *x = background_windings[3]);
+        plaquettes
+            .slice_mut(s![.., 0, .., 0, .., 4])
+            .iter_mut()
+            .for_each(|x| *x = background_windings[4]);
+        plaquettes
+            .slice_mut(s![.., 0, 0, .., .., 5])
+            .iter_mut()
+            .for_each(|x| *x = background_windings[5]);
+
+        Some(DualState::new_plaquettes(plaquettes))
+    } else {
+        None
+    };
+
     let mut state = CudaBackend::new(
         SiteIndex::new(
             args.systemsize,
@@ -185,19 +232,20 @@ fn run(args: &Args) -> Result<RunResult, String> {
             args.systemsize,
         ),
         vns.clone(),
-        None,
+        state,
         None,
         args.device_id,
         args.chemical_potential_replicas
             .map(|_| replica_mus.clone()),
     )
-    .map_err(|x| x.to_string())?;
+        .map_err(|x| x.to_string())?;
     state.set_parallel_tracking(args.output_tempering_debug);
 
     let mut rng = rand::thread_rng();
     let mut local_versus_global = (0..args.local_updates_per_step)
         .map(|_| LocalUpdate)
         .chain((0..args.global_updates_per_step).map(|_| GlobalUpdate))
+        .chain((0..args.plane_shift_updates_per_step).flat_map(|_| (0..6).map(|p| PlaneShift(p))))
         .chain((0..args.tempering_updates_per_step).map(|_| ParallelTempering))
         .collect::<Vec<_>>();
 
@@ -266,7 +314,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-        .map_err(|x| x.to_string())?;
+            .map_err(|x| x.to_string())?;
     }
     log::info!("Done!");
 
@@ -296,7 +344,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-        .map_err(|x| x.to_string())?;
+            .map_err(|x| x.to_string())?;
 
         let energies = state.get_action_per_replica().map_err(|x| x.to_string())?;
         let mut sample = action_output.index_axis_mut(Axis(0), sample_number);
@@ -345,6 +393,9 @@ fn steps<R: Rng>(
                 GlobalUpdate => state.run_global_update_sweep()?,
                 ParallelTempering => {
                     state.parallel_tempering_step(&parallel_perms[i % parallel_perms.len()])?
+                }
+                PlaneShift(p) => {
+                    state.run_plane_shift(*p)?
                 }
             }
         }

@@ -30,6 +30,8 @@ if __name__ == "__main__":
                         default=False)
     parser.add_argument("--disable_output_winding", action="store_true", help="Disables logging windings",
                         default=False)
+    parser.add_argument('--background_windings', metavar='W', type=int, nargs='+', default=[0, 0, 0, 0, 0, 0],
+                        help='Background planes to insert at start')
 
     args = parser.parse_args()
 
@@ -66,7 +68,7 @@ if __name__ == "__main__":
     if args.executable:
         executable = [args.executable]
     else:
-        executable = ["cargo", "run", "--release", "--"]
+        executable = ["cargo", "run", "--release", "--bin", "gauge_mc_runner", "--"]
 
     if args.task_id is not None:
         Ls = [Ls[args.task_id]]
@@ -100,6 +102,7 @@ if __name__ == "__main__":
                                  "--systemsize", str(l),
                                  "--steps-per-sample", str(stepspersample),
                                  "--config-output", configfile,
+                                 "--background-winding", " ".join(map(str, args.background_windings)),
                                  "--output", outputfile] + output_windings
                    + device_arr + global_move_arr)
             print("Running " + " ".join(cmd))

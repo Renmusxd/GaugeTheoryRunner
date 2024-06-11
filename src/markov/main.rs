@@ -1,4 +1,4 @@
-use clap::{Parser};
+use clap::Parser;
 use gaugemc::{CudaBackend, CudaError, SiteIndex};
 use log::info;
 use ndarray::{Array0, Array1, Array2, Array3, Axis};
@@ -64,7 +64,7 @@ impl std::str::FromStr for Potential {
                     Err(format!("Could not parse power float {}", arg))
                 }
             }
-            _ => Err(format!("Potential {} not recognized", s))
+            _ => Err(format!("Potential {} not recognized", s)),
         }
     }
 }
@@ -101,9 +101,7 @@ impl Potential {
                 1 => k,
                 _ => 1000.,
             },
-            Potential::Power(gamma) => {
-                (n as f32).abs().powf(*gamma)
-            }
+            Potential::Power(gamma) => (n as f32).abs().powf(*gamma),
         }
     }
 }
@@ -173,12 +171,15 @@ fn main() -> Result<(), CudaError> {
         })?;
     let average_transition_probs = all_transition_probs.mean_axis(Axis(0)).unwrap();
     let mut std_transition_probs = all_transition_probs.std_axis(Axis(0), 1.0);
-    std_transition_probs.iter_mut().zip(average_transition_probs.iter()).for_each(|(std, mean)| {
-        *std /= mean;
-    });
-    let mut distribution = Array1::zeros((num_replicas, ));
-    let mut free_energies = Array1::zeros((num_replicas, ));
-    let mut std_error_free_energies = Array1::zeros((num_replicas, ));
+    std_transition_probs
+        .iter_mut()
+        .zip(average_transition_probs.iter())
+        .for_each(|(std, mean)| {
+            *std /= mean;
+        });
+    let mut distribution = Array1::zeros((num_replicas,));
+    let mut free_energies = Array1::zeros((num_replicas,));
+    let mut std_error_free_energies = Array1::zeros((num_replicas,));
     let mut acc = 1.0;
     free_energies[0] = 0.0f64;
     std_error_free_energies[0] = 0.0f64;
@@ -186,7 +187,8 @@ fn main() -> Result<(), CudaError> {
     for i in 1..num_replicas {
         let delta_free = (average_transition_probs[[i - 1, 1]] as f64).ln()
             - (average_transition_probs[[i, 0]] as f64).ln();
-        let delta_std_squared = (std_transition_probs[[i - 1, 1]].powi(2) + std_transition_probs[[i, 0]].powi(2)) as f64;
+        let delta_std_squared = (std_transition_probs[[i - 1, 1]].powi(2)
+            + std_transition_probs[[i, 0]].powi(2)) as f64;
 
         let new_logp = -free_energies[i - 1] + delta_free;
         let std_err_new_logp = (std_error_free_energies[i - 1].powi(2) + delta_std_squared).sqrt();
@@ -212,37 +214,61 @@ fn main() -> Result<(), CudaError> {
         npz.add_array("alpha", &Array0::from_elem((), *alpha))
             .expect("Could not add alpha to file.");
     }
-    npz.add_array("potential", &Array0::from_elem((), u8::from(args.potential_type)))
-        .expect("Could not add potential to file.");
-    npz.add_array("num_samples", &Array0::from_elem((), args.num_samples as u64))
-        .expect("Could not add num_samples to file.");
-    npz.add_array("num_steps_per_sample", &Array0::from_elem((), args.num_steps_per_sample as u64))
-        .expect("Could not add num_steps_per_sample to file.");
-    npz.add_array("warmup_steps", &Array0::from_elem((), args.warmup_steps as u64))
-        .expect("Could not add warmup_steps to file.");
-    npz.add_array("plaquette_type", &Array0::from_elem((), args.plaquette_type))
-        .expect("Could not add plaquette_type to file.");
-    npz.add_array("run_plane_shift_updates", &Array0::from_elem((), args.run_plane_shift_updates))
-        .expect("Could not add run_plane_shift_updates to file.");
+    npz.add_array(
+        "potential",
+        &Array0::from_elem((), u8::from(args.potential_type)),
+    )
+    .expect("Could not add potential to file.");
+    npz.add_array(
+        "num_samples",
+        &Array0::from_elem((), args.num_samples as u64),
+    )
+    .expect("Could not add num_samples to file.");
+    npz.add_array(
+        "num_steps_per_sample",
+        &Array0::from_elem((), args.num_steps_per_sample as u64),
+    )
+    .expect("Could not add num_steps_per_sample to file.");
+    npz.add_array(
+        "warmup_steps",
+        &Array0::from_elem((), args.warmup_steps as u64),
+    )
+    .expect("Could not add warmup_steps to file.");
+    npz.add_array(
+        "plaquette_type",
+        &Array0::from_elem((), args.plaquette_type),
+    )
+    .expect("Could not add plaquette_type to file.");
+    npz.add_array(
+        "run_plane_shift_updates",
+        &Array0::from_elem((), args.run_plane_shift_updates),
+    )
+    .expect("Could not add run_plane_shift_updates to file.");
 
     if let Some(device_id) = args.device_id {
         npz.add_array("device_id", &Array0::from_elem((), device_id as u64))
             .expect("Could not add device_id to file.");
     }
     if let Some(replica_index_low) = args.replica_index_low {
-        npz.add_array("replica_index_low", &Array0::from_elem((), replica_index_low as u64))
-            .expect("Could not add replica_index_low to file.");
+        npz.add_array(
+            "replica_index_low",
+            &Array0::from_elem((), replica_index_low as u64),
+        )
+        .expect("Could not add replica_index_low to file.");
     }
     if let Some(replica_index_high) = args.replica_index_high {
-        npz.add_array("replica_index_high", &Array0::from_elem((), replica_index_high as u64))
-            .expect("Could not add replica_index_high to file.");
+        npz.add_array(
+            "replica_index_high",
+            &Array0::from_elem((), replica_index_high as u64),
+        )
+        .expect("Could not add replica_index_high to file.");
     }
 
     npz.add_array(
         "replica_indices",
         &Array1::from_vec(replica_indices.into_iter().map(|x| x as u32).collect()),
     )
-        .expect("Could not add replica_indices to file.");
+    .expect("Could not add replica_indices to file.");
     npz.add_array("all_transition_probs", &all_transition_probs)
         .expect("Could not add all_transition_probs to file.");
     npz.add_array("transition_probs", &average_transition_probs)
