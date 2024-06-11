@@ -43,5 +43,10 @@ EXE=target/release/markov
 
 ks="0.5 0.6 0.7 0.8 0.9 1.0 1.005 1.01 1.015 1.02 1.025 1.03 1.035 1.04 1.045 1.05 1.1 1.2 1.3 1.4 1.5"
 for k in $ks; do
-$EXE --systemsize="${SYSTEMSIZE}" --output="${BASE_DIR}/${POTENTIAL}/markov/markov_${POTENTIAL}_L${SYSTEMSIZE}_k${k}_n4096_s16.npz" --k="$k" --num-samples=4096 --replica-index-high="$RUN_INDEX" --potential-type="$POTENTIAL"
+$EXE --systemsize="${SYSTEMSIZE}" \
+--output="${BASE_DIR}/${POTENTIAL}/markov/markov_${POTENTIAL}_L${SYSTEMSIZE}_k${k}_n4096_s16.npz" \
+--k="$k" \
+--num-samples=4096 \
+--replica-index-high="$RUN_INDEX" \
+--potential-type="$POTENTIAL"
 done
