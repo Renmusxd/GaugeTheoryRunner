@@ -35,7 +35,7 @@ python scripts/run_rec.py --output_directory "${BASE_DIR}/${POTENTIAL}/w${w}" \
 --replicas=$WREPLICAS \
 --steps_per_sample=$STEPSPERSAMPLE \
 --executable "$EXE" \
---potential_type=villain \
+--potential_type="$POTENTIAL" \
 --iter_factor=4 \
 --iteration=10 \
 --disable_global_moves \
