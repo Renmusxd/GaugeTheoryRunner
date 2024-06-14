@@ -6,6 +6,10 @@ SYSTEMSIZE=$1
 POTENTIAL=$2
 BASE_DIR=$3
 
+RUNTYPE=${4:-"DRILL"}
+
+echo $RUNTYPE
+
 WSAMPLES=2048
 WREPLICAS=64
 STEPSPERSAMPLE=8
@@ -16,6 +20,9 @@ MAXWINDING=8
 RUN_INDEX=$(( SYSTEMSIZE * SYSTEMSIZE * MAXWINDING + 1))
 
 mkdir -p "${BASE_DIR}/${POTENTIAL}"
+
+
+if [ "${RUNTYPE}" = "DRILL" ]; then
 
 cargo build --release --bin gauge_mc_runner
 EXE=target/release/gauge_mc_runner
@@ -36,6 +43,11 @@ python scripts/run_rec.py --output_directory "${BASE_DIR}/${POTENTIAL}/w${w}" \
 --background_winding=$w
 done
 
+fi
+
+
+if [ "${RUNTYPE}" = "WIND" ]; then
+
 mkdir -p "${BASE_DIR}/${POTENTIAL}/markov"
 
 cargo build --release --bin markov
@@ -50,3 +62,5 @@ $EXE --systemsize="${SYSTEMSIZE}" \
 --replica-index-high="$RUN_INDEX" \
 --potential-type="$POTENTIAL"
 done
+
+fi
