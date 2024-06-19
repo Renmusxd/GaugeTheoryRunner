@@ -5,14 +5,16 @@ import sys
 import numpy
 
 
-def run_for_l_and_ks(potential, L, ks, zfill=3, num_samples=4096, nr=8, basedir="."):
+def run_for_l_and_ks(potential, L, ks, zfill=3, num_samples=4096, nr=8, basedir=".", executable=None):
+    if executable is None:
+        executable = "cargo run --release --bin markov --"
     run_index = L * L * nr + 1
 
     for k in ks:
         kstr = str(int(k * (10 ** zfill))).zfill(zfill + 1)
         filename = f"{basedir}/markov_{potential}_L{L}_k{kstr}_n{num_samples}_s16.npz"
         cmd = f"""
-        cargo run --release --bin markov -- 
+        {executable} 
         --systemsize={L}
         --output={filename} 
         --k={k}
@@ -28,6 +30,10 @@ def run_for_l_and_ks(potential, L, ks, zfill=3, num_samples=4096, nr=8, basedir=
 if __name__ == "__main__":
     basedir = sys.argv[1]
     L = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        executable = sys.argv[3]
+    else:
+        executable = None
     os.makedirs(basedir, exist_ok=True)
 
     cosine_ks = sorted(set(numpy.concatenate([
@@ -36,7 +42,7 @@ if __name__ == "__main__":
         numpy.linspace(1.0, 1.1, 10),
         numpy.linspace(1.0, 1.15, 10),
     ])))
-    run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir)
+    run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir, executable=executable)
 
     villain_ks = sorted(set(numpy.concatenate([
         numpy.linspace(0.5, 1.5, 10),
@@ -44,7 +50,7 @@ if __name__ == "__main__":
         numpy.linspace(0.7, 0.85, 10),
         numpy.linspace(0.75, 0.8, 10),
     ])))
-    run_for_l_and_ks("villain", L, villain_ks, basedir=basedir)
+    run_for_l_and_ks("villain", L, villain_ks, basedir=basedir, executable=executable)
 
     binary_ks = sorted(set(numpy.concatenate([
         numpy.linspace(0.5, 1.5, 10),
@@ -52,4 +58,4 @@ if __name__ == "__main__":
         numpy.linspace(0.7, 0.85, 10),
         numpy.linspace(0.75, 0.8, 10),
     ])))
-    run_for_l_and_ks("binary", L, binary_ks, basedir=basedir)
+    run_for_l_and_ks("binary", L, binary_ks, basedir=basedir, executable=executable)
