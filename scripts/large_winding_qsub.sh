@@ -32,7 +32,7 @@ export RUST_LOG=info
 $EXE "$PYTHONEXE" \
 --executable "$RUSTEXE" \
 --system_size "$SYSTEMSIZE" \
---num_samples 10 \
+--num_samples 4096 \
 --replicas_per_task "$REPLICAS_PER_TASK" \
 --max_replica_number $(( SYSTEMSIZE * SYSTEMSIZE * 8 + 1 )) \
 --task_id "$TASK_INDEX" \
