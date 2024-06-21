@@ -1,4 +1,4 @@
-#!/bin/sh -l
+#!/bin/bash -l
 # $ -N large_winding
 # $ -cwd
 # $ -m ea
