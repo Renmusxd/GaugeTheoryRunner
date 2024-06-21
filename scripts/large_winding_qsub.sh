@@ -1,11 +1,11 @@
 #!/bin/bash -l
-# $ -N large_winding
-# $ -cwd
-# $ -m ea
-# $ -M sumnerh@bu.edu
-# $ -l h_rt=24:00:00
-# $ -l gpus=1
-# $ -l gpu_c=6.0
+#$ -N large_winding
+#$ -cwd
+#$ -m ea
+#$ -M sumnerh@bu.edu
+#$ -l h_rt=24:00:00
+#$ -l gpus=1
+#$ -l gpu_c=6.0
 
 POTENTIAL=$1
 K=$2
