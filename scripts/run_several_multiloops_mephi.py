@@ -13,6 +13,8 @@ def run_for_l_and_ks(potential, L, ks, zfill=3, num_samples=4096, nr=8, basedir=
     for k in ks:
         kstr = str(int(k * (10 ** zfill))).zfill(zfill + 1)
         filename = f"{basedir}/markov_{potential}_L{L}_k{kstr}_n{num_samples}_s16.npz"
+        if os.path.exists(filename):
+            continue
         cmd = f"""
         {executable} 
         --systemsize={L}
