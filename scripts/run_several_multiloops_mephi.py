@@ -42,6 +42,7 @@ if __name__ == "__main__":
         numpy.linspace(0.5, 1.5, 10),
         numpy.linspace(0.9, 1.2, 10),
         numpy.linspace(1.0, 1.1, 10),
+        numpy.linspace(1.010, 1.015, 10),
         numpy.linspace(1.0, 1.15, 10),
     ])))
     run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir, executable=executable)
@@ -51,6 +52,7 @@ if __name__ == "__main__":
         numpy.linspace(0.6, 0.9, 10),
         numpy.linspace(0.7, 0.85, 10),
         numpy.linspace(0.75, 0.8, 10),
+        numpy.linspace(0.77, 0.78, 10),
     ])))
     run_for_l_and_ks("villain", L, villain_ks, basedir=basedir, executable=executable)
 
@@ -59,5 +61,6 @@ if __name__ == "__main__":
         numpy.linspace(0.6, 0.9, 10),
         numpy.linspace(0.7, 0.85, 10),
         numpy.linspace(0.75, 0.8, 10),
+        numpy.linspace(0.76, 0.77, 10),
     ])))
     run_for_l_and_ks("binary", L, binary_ks, basedir=basedir, executable=executable)
