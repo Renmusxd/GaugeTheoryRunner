@@ -22,7 +22,7 @@ def rename_files(zfill=7, basedir="."):
                 os.rename(filename, new_filename)
 
 
-def run_for_l_and_ks(potential, L, ks, zfill=5, num_samples=4096, nr=8, basedir=".", executable=None):
+def run_for_l_and_ks(potential, L, ks, zfill=7, num_samples=4096, nr=8, basedir=".", executable=None):
     if executable is None:
         executable = "cargo run --release --bin markov --"
     run_index = L * L * nr + 1
@@ -47,6 +47,7 @@ def run_for_l_and_ks(potential, L, ks, zfill=5, num_samples=4096, nr=8, basedir=
 
 
 if __name__ == "__main__":
+    zfill = 7
     basedir = sys.argv[1]
     L = int(sys.argv[2])
     if len(sys.argv) > 3:
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     os.makedirs(basedir, exist_ok=True)
 
     # First check for existing and rename if needed
-    rename_files(basedir=basedir)
+    rename_files(basedir=basedir, zfill=zfill)
 
     cosine_ks = sorted(set(numpy.concatenate([
         numpy.linspace(0.5, 1.5, 10),
@@ -80,8 +81,8 @@ if __name__ == "__main__":
         numpy.linspace(0.76, 0.77, 10),
     ])))
 
-    run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir, executable=executable)
+    run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir, executable=executable, zfill=zfill)
 
-    run_for_l_and_ks("villain", L, villain_ks, basedir=basedir, executable=executable)
+    run_for_l_and_ks("villain", L, villain_ks, basedir=basedir, executable=executable, zfill=zfill)
 
-    run_for_l_and_ks("binary", L, binary_ks, basedir=basedir, executable=executable)
+    run_for_l_and_ks("binary", L, binary_ks, basedir=basedir, executable=executable, zfill=zfill)
