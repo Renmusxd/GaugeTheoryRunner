@@ -5,23 +5,6 @@ import sys
 import numpy
 
 
-def rename_files(zfill=7, basedir="."):
-    potentials = ["villain", "cosine", "binary", "power"]
-    for file in os.listdir(basedir):
-        filename = os.path.join(basedir, file)
-        if filename.endswith(".npz"):
-            arr = numpy.load(filename)
-            potential = potentials[arr["potential"][()]]
-            L = int(arr["L"][()])
-            k = arr["k"][()]
-            kstr = str(int(k * (10 ** zfill))).zfill(zfill + 1)
-            num_samples = arr["num_samples"][()]
-            new_filename = os.path.join(f"{basedir}", f"markov_{potential}_L{L}_k{kstr}_n{num_samples}_s16.npz")
-            if filename != new_filename:
-                print(f"Renaming {filename} to {new_filename}")
-                os.rename(filename, new_filename)
-
-
 def run_for_l_and_ks(potential, L, ks, zfill=7, num_samples=4096, nr=8, basedir=".", executable=None):
     if executable is None:
         executable = "cargo run --release --bin markov --"
@@ -55,9 +38,6 @@ if __name__ == "__main__":
     else:
         executable = None
     os.makedirs(basedir, exist_ok=True)
-
-    # First check for existing and rename if needed
-    rename_files(basedir=basedir, zfill=zfill)
 
     cosine_ks = sorted(set(numpy.concatenate([
         numpy.linspace(0.5, 1.5, 10),
