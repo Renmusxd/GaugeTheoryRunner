@@ -5,7 +5,7 @@ import sys
 import numpy
 
 
-def run_for_l_and_ks(potential, L, ks, zfill=7, num_samples=4096, nr=8, basedir=".", executable=None):
+def run_for_l_and_ks(potential, L, ks, zfill=7, num_samples=4096, nr=8, basedir=".", executable=None, dry_run=False):
     if executable is None:
         executable = "cargo run --release --bin markov --"
     run_index = L * L * nr + 1
@@ -26,7 +26,8 @@ def run_for_l_and_ks(potential, L, ks, zfill=7, num_samples=4096, nr=8, basedir=
         """.split("\n")
         cmd = " ".join(map(lambda x: x.strip(), cmd)).strip()
         print("Running " + cmd)
-        subprocess.run(cmd.split(" "))
+        if not dry_run:
+            subprocess.run(cmd.split(" "))
 
 
 if __name__ == "__main__":
@@ -37,6 +38,11 @@ if __name__ == "__main__":
         executable = sys.argv[3]
     else:
         executable = None
+
+    dry_run = False
+    if len(sys.argv) > 4:
+        if sys.argv[4] == "DRY_RUN":
+            dry_run = True
     os.makedirs(basedir, exist_ok=True)
 
     cosine_ks = sorted(set(numpy.concatenate([
@@ -61,8 +67,8 @@ if __name__ == "__main__":
         numpy.linspace(0.76, 0.77, 10),
     ])))
 
-    run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir, executable=executable, zfill=zfill)
+    run_for_l_and_ks("cosine", L, cosine_ks, basedir=basedir, executable=executable, zfill=zfill, dry_run=dry_run)
 
-    run_for_l_and_ks("villain", L, villain_ks, basedir=basedir, executable=executable, zfill=zfill)
+    run_for_l_and_ks("villain", L, villain_ks, basedir=basedir, executable=executable, zfill=zfill, dry_run=dry_run)
 
-    run_for_l_and_ks("binary", L, binary_ks, basedir=basedir, executable=executable, zfill=zfill)
+    run_for_l_and_ks("binary", L, binary_ks, basedir=basedir, executable=executable, zfill=zfill, dry_run=dry_run)
