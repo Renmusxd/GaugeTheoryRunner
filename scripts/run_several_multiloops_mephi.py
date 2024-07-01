@@ -46,6 +46,7 @@ if __name__ == "__main__":
     os.makedirs(basedir, exist_ok=True)
 
     cosine_ks = sorted(set(numpy.concatenate([
+        numpy.linspace(0.10, 0.45, 8),
         numpy.linspace(0.5, 1.5, 10),
         numpy.linspace(0.9, 1.2, 10),
         numpy.linspace(1.0, 1.1, 10),
