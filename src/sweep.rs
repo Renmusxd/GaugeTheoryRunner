@@ -6,12 +6,12 @@ use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
 
 use ndarray::{s, Array1, Array2, Array3, Array6, Axis};
 use ndarray_npy::NpzWriter;
-use num_complex::Complex;
 use rand::prelude::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 use std::fs::File;
+use gauge_mc_runner::Potential;
+
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(version, about, long_about = None)]
@@ -48,7 +48,7 @@ struct Args {
     log_every: usize,
     #[arg(long, default_value = "villain")]
     potential_type: Potential,
-    #[arg(long, default_value_t = 32)]
+    #[arg(long, default_value_t = 64)]
     potential_values: usize,
     #[arg(long, default_value = None)]
     cap_potentials: Option<f32>,
@@ -66,46 +66,6 @@ struct Args {
     output_tempering_debug: bool,
     #[arg(long, default_value = None)]
     device_id: Option<usize>,
-}
-
-#[derive(clap::ValueEnum, Clone, Default, Debug, Serialize, Deserialize)]
-#[serde(rename_all_fields = "kebab-case")]
-enum Potential {
-    #[default]
-    Villain,
-    Cosine,
-    Binary,
-}
-
-impl Potential {
-    fn eval(&self, n: u32, k: f32) -> f32 {
-        match self {
-            Potential::Villain => k * n.pow(2) as f32,
-            Potential::Cosine => {
-                if n == 0 {
-                    0.0
-                } else {
-                    let t = scilib::math::bessel::i_nu(n as f64, Complex::from(k as f64));
-                    let b = scilib::math::bessel::i_nu(0., Complex::from(k as f64));
-                    assert!(t.im < f64::EPSILON);
-                    assert!(b.im < f64::EPSILON);
-                    let res = -(t.re / b.re).ln();
-                    res as f32
-                }
-            }
-            Potential::Binary => match n {
-                0 => 0.0,
-                1 => k,
-                _ => 1000.,
-            },
-        }
-    }
-}
-
-impl Display for Potential {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("{:?}", self))
-    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -245,7 +205,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
     let mut local_versus_global = (0..args.local_updates_per_step)
         .map(|_| LocalUpdate)
         .chain((0..args.global_updates_per_step).map(|_| GlobalUpdate))
-        .chain((0..args.plane_shift_updates_per_step).flat_map(|_| (0..6).map(|p| PlaneShift(p))))
+        .chain((0..args.plane_shift_updates_per_step).flat_map(|_| (0..6).map(PlaneShift)))
         .chain((0..args.tempering_updates_per_step).map(|_| ParallelTempering))
         .collect::<Vec<_>>();
 

@@ -5,7 +5,11 @@ edition = "2021"
 
 [[bin]]
 name = "markov"
-path = "src/markov/main.rs"
+path = "src/markov.rs"
+
+[[bin]]
+name = "sweep"
+path = "src/sweep.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -17,7 +21,7 @@ chrono = "0.4"
 env_logger = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-scilib = "1.0"
+complex-bessel-rs = "1.2"
 num-complex = "0.4"
 
 [dependencies.gaugemc]

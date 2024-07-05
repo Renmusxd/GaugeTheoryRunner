@@ -3,10 +3,9 @@ use gaugemc::{CudaBackend, CudaError, SiteIndex};
 use log::info;
 use ndarray::{Array0, Array1, Array2, Array3, Axis};
 use ndarray_npy::NpzWriter;
-use num_complex::Complex;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 use std::fs::File;
+use gauge_mc_runner::Potential;
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(version, about, long_about = None)]
@@ -39,78 +38,6 @@ struct Args {
     replica_index_high: Option<usize>,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-enum Potential {
-    #[default]
-    Villain,
-    Cosine,
-    Binary,
-    Power(f32),
-}
-
-impl std::str::FromStr for Potential {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "villain" => Ok(Potential::Villain),
-            "cosine" => Ok(Potential::Cosine),
-            "binary" => Ok(Potential::Binary),
-            ss if ss.starts_with("power(") && ss.ends_with(")") => {
-                let arg = &ss[6..ss.len() - 1];
-                if let Ok(arg) = f32::from_str(arg) {
-                    Ok(Potential::Power(arg))
-                } else {
-                    Err(format!("Could not parse power float {}", arg))
-                }
-            }
-            _ => Err(format!("Potential {} not recognized", s)),
-        }
-    }
-}
-
-impl From<Potential> for u8 {
-    fn from(value: Potential) -> Self {
-        match value {
-            Potential::Villain => 0,
-            Potential::Cosine => 1,
-            Potential::Binary => 2,
-            Potential::Power(_) => 3,
-        }
-    }
-}
-
-impl Potential {
-    fn eval(&self, n: u32, k: f32) -> f32 {
-        match self {
-            Potential::Villain => k * n.pow(2) as f32,
-            Potential::Cosine => {
-                if n == 0 {
-                    0.0
-                } else {
-                    let t = scilib::math::bessel::i_nu(n as f64, Complex::from(k as f64));
-                    let b = scilib::math::bessel::i_nu(0., Complex::from(k as f64));
-                    assert!(t.im < f64::EPSILON);
-                    assert!(b.im < f64::EPSILON);
-                    let res = -(t.re / b.re).ln();
-                    res as f32
-                }
-            }
-            Potential::Binary => match n {
-                0 => 0.0,
-                1 => k,
-                _ => 1000.,
-            },
-            Potential::Power(gamma) => (n as f32).abs().powf(*gamma),
-        }
-    }
-}
-
-impl Display for Potential {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("{:?}", self))
-    }
-}
 
 fn main() -> Result<(), CudaError> {
     env_logger::init();
@@ -218,32 +145,32 @@ fn main() -> Result<(), CudaError> {
         "potential",
         &Array0::from_elem((), u8::from(args.potential_type)),
     )
-    .expect("Could not add potential to file.");
+        .expect("Could not add potential to file.");
     npz.add_array(
         "num_samples",
         &Array0::from_elem((), args.num_samples as u64),
     )
-    .expect("Could not add num_samples to file.");
+        .expect("Could not add num_samples to file.");
     npz.add_array(
         "num_steps_per_sample",
         &Array0::from_elem((), args.num_steps_per_sample as u64),
     )
-    .expect("Could not add num_steps_per_sample to file.");
+        .expect("Could not add num_steps_per_sample to file.");
     npz.add_array(
         "warmup_steps",
         &Array0::from_elem((), args.warmup_steps as u64),
     )
-    .expect("Could not add warmup_steps to file.");
+        .expect("Could not add warmup_steps to file.");
     npz.add_array(
         "plaquette_type",
         &Array0::from_elem((), args.plaquette_type),
     )
-    .expect("Could not add plaquette_type to file.");
+        .expect("Could not add plaquette_type to file.");
     npz.add_array(
         "run_plane_shift_updates",
         &Array0::from_elem((), args.run_plane_shift_updates),
     )
-    .expect("Could not add run_plane_shift_updates to file.");
+        .expect("Could not add run_plane_shift_updates to file.");
 
     if let Some(device_id) = args.device_id {
         npz.add_array("device_id", &Array0::from_elem((), device_id as u64))
@@ -254,21 +181,21 @@ fn main() -> Result<(), CudaError> {
             "replica_index_low",
             &Array0::from_elem((), replica_index_low as u64),
         )
-        .expect("Could not add replica_index_low to file.");
+            .expect("Could not add replica_index_low to file.");
     }
     if let Some(replica_index_high) = args.replica_index_high {
         npz.add_array(
             "replica_index_high",
             &Array0::from_elem((), replica_index_high as u64),
         )
-        .expect("Could not add replica_index_high to file.");
+            .expect("Could not add replica_index_high to file.");
     }
 
     npz.add_array(
         "replica_indices",
         &Array1::from_vec(replica_indices.into_iter().map(|x| x as u32).collect()),
     )
-    .expect("Could not add replica_indices to file.");
+        .expect("Could not add replica_indices to file.");
     npz.add_array("all_transition_probs", &all_transition_probs)
         .expect("Could not add all_transition_probs to file.");
     npz.add_array("transition_probs", &average_transition_probs)
