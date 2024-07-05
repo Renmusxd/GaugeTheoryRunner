@@ -36,6 +36,8 @@ struct Args {
     replica_index_low: Option<usize>,
     #[arg(long, default_value = None)]
     replica_index_high: Option<usize>,
+    #[arg(long, default_value_t = 10)]
+    log_every: usize,
 }
 
 
@@ -84,7 +86,9 @@ fn main() -> Result<(), CudaError> {
         .axis_iter_mut(Axis(0))
         .enumerate()
         .try_for_each(|(i, mut x)| -> Result<(), CudaError> {
-            info!("Computing count {}/{}", i, num_counts);
+            if i % args.log_every == 0 {
+                info!("Computing count {}/{}", i, num_counts);
+            }
             for _ in 0..num_steps {
                 state.run_local_update_sweep()?;
                 if args.run_plane_shift_updates {
