@@ -8,8 +8,8 @@ export RUST_LOG=info
 
 PYEXE=$(which python)
 
-for L in 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32; do
 for w in 0 1 2 3 4; do
+for L in 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32; do
 for POT in "cosine" "villain" "binary"; do
   if ! [ -f "$OUTPUTDIR/w=$w/$POT/L=$L/done" ]; then
     mkdir -p "$OUTPUTDIR/w=$w/$POT"
