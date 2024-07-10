@@ -32,8 +32,12 @@ if __name__ == "__main__":
                         default=False)
     parser.add_argument('--background_windings', metavar='W', type=int, nargs='+', default=[0, 0, 0, 0, 0, 0],
                         help='Background planes to insert at start')
+    parser.add_argument("--dont_round_ks", action="store_true", help="Disable rounding k values",
+                        default=False)
+    parser.add_argument("--round_starting_digits", type=int, help="Number of offset digits for rounding",
+                        default=2)
 
-    args = parser.parse_args()
+args = parser.parse_args()
 
     print("Running recursive with:")
     for k, v in vars(args).items():
@@ -134,5 +138,5 @@ if __name__ == "__main__":
 
             krange = khigh - klow
 
-            klow = numpy.round(peak_k - (krange / (2 * iter_factor)), iternum + 2)
-            khigh = numpy.round(peak_k + (krange / (2 * iter_factor)), iternum + 2)
+            klow = numpy.round(peak_k - (krange / (2 * iter_factor)), args.round_starting_digits + iternum)
+            khigh = numpy.round(peak_k + (krange / (2 * iter_factor)), args.round_starting_digits + iternum)
