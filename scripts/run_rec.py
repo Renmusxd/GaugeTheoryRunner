@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("--round_starting_digits", type=int, help="Number of offset digits for rounding",
                         default=2)
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
     print("Running recursive with:")
     for k, v in vars(args).items():
