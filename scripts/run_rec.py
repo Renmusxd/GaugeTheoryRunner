@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--replicas", default=64, type=int, help="Number of replicas in array")
     parser.add_argument("--samples", default=1024, type=int, help="Number of samples to take for each klow-khigh")
     parser.add_argument("--steps_per_sample", default=32, type=int, help="Number of steps between samples")
+    parser.add_argument("--tempering_steps", default=1, type=int, help="Number parallel tempering steps")
     parser.add_argument('--task_id', default=None, type=int, help="Task id if system sizes should be broken into tasks")
     parser.add_argument("--executable", help="Replace cargo-run with an executable")
     parser.add_argument('--log_to_file', action="store_true", help="Enable file logging")
@@ -106,6 +107,8 @@ if __name__ == "__main__":
                                  "--systemsize", str(l),
                                  "--steps-per-sample", str(stepspersample),
                                  "--config-output", configfile,
+                                 "--plane-shift-updates-per-step", str(0),
+                                 "--tempering-updates-per-step", str(args.tempering_steps),
                                  "--background-winding", " ".join(map(str, args.background_windings)),
                                  "--output", outputfile] + output_windings
                    + device_arr + global_move_arr)
