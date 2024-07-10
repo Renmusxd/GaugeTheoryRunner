@@ -3,7 +3,7 @@
 #$ -cwd
 #$ -m ea
 #$ -M sumnerh@bu.edu
-#$ -l h_rt=72:00:00
+#$ -l h_rt=48:00:00
 #$ -l gpus=1
 #$ -l gpu_c=6.0
 #$ -l gpu_memory=8G
