@@ -20,6 +20,8 @@ if __name__ == "__main__":
     parser.add_argument("--iter_factor", default=4, type=int, help="Zoom factor for ks each iteration")
     parser.add_argument("--iterations", default=5, type=int, help="Total number of iterations")
     parser.add_argument("--warmup", default=128, type=int, help="Number of warmup steps before sampling")
+    parser.add_argument("--hot_warmup", default=0, type=int, help="Number of warmup steps at hot k before warmup")
+    parser.add_argument("--hot_warmup_k", default=2.0, type=float, help="Value of hot k for warmup")
     parser.add_argument("--replicas", default=64, type=int, help="Number of replicas in array")
     parser.add_argument("--samples", default=1024, type=int, help="Number of samples to take for each klow-khigh")
     parser.add_argument("--steps_per_sample", default=32, type=int, help="Number of steps between samples")
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     if args.executable:
         executable = [args.executable]
     else:
-        executable = ["cargo", "run", "--release", "--bin", "gauge_mc_runner", "--"]
+        executable = ["cargo", "run", "--release", "--bin", "sweep", "--"]
 
     if args.task_id is not None:
         Ls = [Ls[args.task_id]]
@@ -104,6 +106,8 @@ if __name__ == "__main__":
                                  "--replicas-ks", str(replicas),
                                  "--num-samples", str(samples),
                                  "--warmup-samples", str(warmup),
+                                 "--hot-warmup-samples", str(args.hot_warmup),
+                                 "--khot-start", str(args.hot_warmup_k),
                                  "--systemsize", str(l),
                                  "--steps-per-sample", str(stepspersample),
                                  "--config-output", configfile,

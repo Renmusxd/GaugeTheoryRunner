@@ -38,6 +38,10 @@ struct Args {
     klow: f32,
     #[arg(long, default_value_t = 1.5)]
     khigh: f32,
+    #[arg(long, default_value_t = 0)]
+    hot_warmup_samples: usize,
+    #[arg(long, default_value_t = 2.0)]
+    khot_start: f32,
     #[arg(short, long, default_value = None)]
     chemical_potential_replicas: Option<usize>,
     #[arg(long, default_value_t = 0.0)]
@@ -95,6 +99,20 @@ struct RunResult {
     state: CudaBackend,
 }
 
+fn make_vns(potential: &Potential, ks: Array1<f32>, potential_values: usize, cap: Option<f32>) -> Array2<f32> {
+    let mut vns = Array2::zeros((
+        ks.shape()[0],
+        potential_values,
+    ));
+    ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
+        *x = potential.eval(np as u32, ks[r]);
+    });
+    if let Some(cap) = cap {
+        vns.slice_mut(s![.., -1]).iter_mut().for_each(|x| *x = cap);
+    }
+    vns
+}
+
 fn run(args: &Args) -> Result<RunResult, String> {
     let chemical_potential_replicas = args.chemical_potential_replicas.unwrap_or(1);
 
@@ -119,17 +137,9 @@ fn run(args: &Args) -> Result<RunResult, String> {
     log::debug!("Running on mus: {:?}", mus);
     let mus = Array1::from_vec(mus);
 
-    let mut vns = Array2::zeros((
-        args.replicas_ks * chemical_potential_replicas,
-        args.potential_values,
-    ));
-    ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
-        let kr = r % args.replicas_ks;
-        *x = args.potential_type.eval(np as u32, ks[kr]);
-    });
-    if let Some(cap) = args.cap_potentials {
-        vns.slice_mut(s![.., -1]).iter_mut().for_each(|x| *x = cap);
-    }
+    let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
+    replica_ks.iter_mut().enumerate().for_each(|(r, k)| *k = ks[r % args.replicas_ks]);
+    let vns = make_vns(&args.potential_type, replica_ks, args.potential_values, args.cap_potentials);
 
     let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
     ndarray::Zip::indexed(&mut replica_ks).for_each(|r, x| {
@@ -262,6 +272,33 @@ fn run(args: &Args) -> Result<RunResult, String> {
         parallel_perms.push(perm_mus_b);
     };
     log::debug!("Permutations: {:?}", parallel_perms);
+
+    if args.hot_warmup_samples > 0 {
+        log::info!("Hot Warmup at k={}", args.khot_start);
+
+        let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
+        replica_ks.iter_mut().for_each(|k| *k = args.khot_start);
+        let hot_vns = make_vns(&args.potential_type, replica_ks, args.potential_values, args.cap_potentials);
+
+        state.set_vns(hot_vns.view())
+            .map_err(|x| x.to_string())?;
+        for warmup_sample in 0..args.hot_warmup_samples {
+            if warmup_sample % args.log_every == 0 {
+                log::info!("Hot warmup {}/{}", warmup_sample, args.hot_warmup_samples);
+            }
+            steps(
+                args,
+                &mut local_versus_global,
+                &mut state,
+                &parallel_perms,
+                &mut rng,
+            )
+                .map_err(|x| x.to_string())?;
+        }
+        state.set_vns(vns.view())
+            .map_err(|x| x.to_string())?;
+        log::info!("Done!");
+    }
 
     for warmup_sample in 0..args.warmup_samples {
         if warmup_sample % args.log_every == 0 {
