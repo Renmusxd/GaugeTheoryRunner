@@ -23,7 +23,9 @@ if [ -z "$PYTHONEXE" ]; then
   PYTHONEXE="$HOME/.virtualenvs/gaugemc/bin/python"
 fi
 
-mkdir -p "$OUTPUTDIR/w=0/L=$L"
+POT=cosine
+
+mkdir -p "$OUTPUTDIR/w=0/$POT/L=$L"
 
 cargo build --release --bin sweep -j 1
 target/release/sweep \
@@ -38,4 +40,5 @@ target/release/sweep \
 --replicas-ks 1 \
 --klow 1.01127432 \
 --khigh 1.01127432 \
---output "$OUTPUTDIR/w=0/L=$L/out-k101127432.npz"
+--potential-type $POT \
+--output "$OUTPUTDIR/w=0/$POT/L=$L/out-k101127432.npz"
