@@ -29,6 +29,10 @@ struct Args {
     #[arg(long, default_value_t = 256)]
     warmup_steps: usize,
     #[arg(long, default_value_t = 0)]
+    hot_warmup_samples: usize,
+    #[arg(long, default_value_t = 2.0)]
+    khot_start: f32,
+    #[arg(long, default_value_t = 0)]
     plaquette_type: u16,
     #[arg(long, default_value_t = true)]
     run_plane_shift_updates: bool,
@@ -57,7 +61,7 @@ fn main() -> Result<(), CudaError> {
 
     let mut state = CudaBackend::new(
         SiteIndex::new(d, d, d, d),
-        vns,
+        vns.clone(),
         None,
         None,
         args.device_id,
@@ -70,7 +74,24 @@ fn main() -> Result<(), CudaError> {
         args.plaquette_type,
     )?;
 
+    if args.hot_warmup_samples > 0 {
+        info!("Hot Warmup at k={}", args.khot_start);
+
+        let mut hot_vns = Array2::zeros((num_replicas, args.knum));
+        ndarray::Zip::indexed(&mut hot_vns).for_each(|(_, np), x| {
+            *x = args.potential_type.eval(np as u32, args.khot_start);
+        });
+
+        state.set_vns(hot_vns.view())?;
+        for _ in 0..args.hot_warmup_samples {
+            state.run_local_update_sweep()?;
+        }
+        state.set_vns(vns.view())?;
+        info!("Done!");
+    }
+
     let num_steps = args.warmup_steps;
+    info!("Warmup at k={}", args.k);
     for _ in 0..num_steps {
         state.run_local_update_sweep()?;
         if args.run_plane_shift_updates {
