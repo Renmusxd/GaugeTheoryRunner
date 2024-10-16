@@ -9,6 +9,7 @@ pub enum Potential {
     Cosine,
     Binary,
     Power(f32),
+    TwoParameter(f32),
 }
 
 impl std::str::FromStr for Potential {
@@ -27,6 +28,14 @@ impl std::str::FromStr for Potential {
                     Err(format!("Could not parse power float {}", arg))
                 }
             }
+            ss if ss.starts_with("twoparameter(") && ss.ends_with(')') => {
+                let arg = &ss[13..ss.len() - 1];
+                if let Ok(arg) = f32::from_str(arg) {
+                    Ok(Potential::TwoParameter(arg))
+                } else {
+                    Err(format!("Could not parse power float {}", arg))
+                }
+            }
             _ => Err(format!("Potential {} not recognized", s)),
         }
     }
@@ -39,6 +48,7 @@ impl From<Potential> for u8 {
             Potential::Cosine => 1,
             Potential::Binary => 2,
             Potential::Power(_) => 3,
+            Potential::TwoParameter(_) => 4,
         }
     }
 }
@@ -65,6 +75,12 @@ impl Potential {
                 _ => 1000.,
             },
             Potential::Power(gamma) => (1. / k) * (n as f32).abs().powf(*gamma),
+            Potential::TwoParameter(r) => match n {
+                0 => 0.0,
+                1 => 1. / k,
+                2 => *r / k,
+                _ => 1000.,
+            }
         }
     }
 }
