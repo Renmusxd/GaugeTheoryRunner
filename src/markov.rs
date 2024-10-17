@@ -162,10 +162,15 @@ fn main() -> Result<(), CudaError> {
         .expect("Could not add k to file.");
     npz.add_array("knum", &Array0::from_elem((), args.knum as u64))
         .expect("Could not add knum to file.");
-    if let Potential::Power(alpha) = &args.potential_type {
-        npz.add_array("alpha", &Array0::from_elem((), *alpha))
-            .expect("Could not add alpha to file.");
+    match &args.potential_type {
+        Potential::Power(alpha) |
+        Potential::TwoParameter(alpha) => {
+            npz.add_array("alpha", &Array0::from_elem((), *alpha))
+                .expect("Could not add alpha to file.");
+        }
+        _ => {}
     }
+
     npz.add_array(
         "potential",
         &Array0::from_elem((), u8::from(args.potential_type)),
