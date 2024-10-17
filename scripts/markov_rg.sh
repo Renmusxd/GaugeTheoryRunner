@@ -9,7 +9,7 @@
 OUTDIR=$1
 SYSTEM_SIZE=$2
 NUM_SAMPLES=$3
-MAX_REPLICA_INDEX=$((2*SYSTEM_SIZE*SYSTEM_SIZE+1))
+MAX_REPLICA_INDEX=$((3*SYSTEM_SIZE*SYSTEM_SIZE+1))
 
 RUSTEXE=$(realpath "target/release/markov")
 
@@ -59,7 +59,8 @@ $RUSTEXE --systemsize=\"$SYSTEM_SIZE\" \
 --k=\"$KVAL\" \
 --potential-type=\"TwoParameter($SECOND_REL)\" \
 --num-samples=\"$NUM_SAMPLES\" \
---output=\"$OUTPUT_DIR/L=${SYSTEM_SIZE}_k=${KVAL}_r=${SECOND_REL}_markov.npz\"
+--output=\"$OUTPUT_DIR/L=${SYSTEM_SIZE}_k=${KVAL}_r=${SECOND_REL}_markov.npz\" \
+--replica-index-high=\"${MAX_REPLICA_INDEX}\"
 "
 
 if [ "$DRY_RUN" != "true" ]; then
@@ -67,5 +68,6 @@ if [ "$DRY_RUN" != "true" ]; then
   --k="$KVAL" \
   --potential-type="TwoParameter($SECOND_REL)" \
   --num-samples="$NUM_SAMPLES" \
-  --output="$OUTPUT_DIR/L=${SYSTEM_SIZE}_k=${KVAL}_r=${SECOND_REL}_markov.npz"
+  --output="$OUTPUT_DIR/L=${SYSTEM_SIZE}_k=${KVAL}_r=${SECOND_REL}_markov.npz" \
+  --replica-index-high="${MAX_REPLICA_INDEX}"
 fi
