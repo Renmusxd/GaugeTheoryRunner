@@ -60,6 +60,8 @@ struct Args {
     output: String,
     #[arg(long, default_value_t = false)]
     output_winding: bool,
+    #[arg(long, default_value_t = false)]
+    output_plaquettes: bool,
     #[arg(long, default_value = None, num_args = 0.., value_delimiter = ' ')]
     background_winding: Option<Vec<i32>>,
     #[arg(long, default_value = None)]
@@ -85,6 +87,8 @@ struct RunResult {
     actions: Array2<f32>,
     // Winding numbers
     windings: Option<Array3<i32>>,
+    // Plaquette counts
+    plaquettes: Option<Array3<u32>>,
     // The unique values of ks
     ks: Array1<f32>,
     // The value of k for each replica
@@ -328,6 +332,15 @@ fn run(args: &Args) -> Result<RunResult, String> {
     } else {
         None
     };
+    let mut plaquette_output = if args.output_plaquettes {
+        Some(Array3::zeros((
+            args.num_samples,
+            args.replicas_ks * chemical_potential_replicas,
+            args.potential_values * 2 - 1,
+        )))
+    } else {
+        None
+    };
 
     for sample_number in 0..args.num_samples {
         if sample_number % args.log_every == 0 {
@@ -355,6 +368,14 @@ fn run(args: &Args) -> Result<RunResult, String> {
                 .zip(windings)
                 .for_each(|(x, y)| *x = y);
         }
+        if let Some(plaquette_output) = plaquette_output.as_mut() {
+            let plaqs = state.get_plaquette_counts().map_err(|x| x.to_string())?;
+            let mut plaqs_sample = plaquette_output.index_axis_mut(Axis(0), sample_number);
+            plaqs_sample
+                .iter_mut()
+                .zip(plaqs)
+                .for_each(|(x, y)| *x = y);
+        }
     }
 
     let mus = args.chemical_potential_replicas.map(|_| mus);
@@ -363,6 +384,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
     let result = RunResult {
         actions: action_output,
         windings: winding_output,
+        plaquettes: plaquette_output,
         ks,
         mus,
         potentials: vns,
@@ -407,6 +429,10 @@ fn write_output<Str: AsRef<str>>(runresult: &RunResult, filename: Str) -> Result
         .map_err(|x| x.to_string())?;
     if let Some(windings) = runresult.windings.as_ref() {
         npz.add_array("windings", windings)
+            .map_err(|x| x.to_string())?;
+    }
+    if let Some(plaquettes) = runresult.plaquettes.as_ref() {
+        npz.add_array("plaquettes", plaquettes)
             .map_err(|x| x.to_string())?;
     }
     npz.add_array("ks", &runresult.ks)
