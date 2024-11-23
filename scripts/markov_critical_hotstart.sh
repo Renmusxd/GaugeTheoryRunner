@@ -8,10 +8,11 @@
 #$ -l h_rt=72:00:00
 
 OUTDIR=$1
-SYSTEM_SIZE=$2
-NUM_SAMPLES=$3
-KVAL=$4
-WARMUP_SAMPLES=${5:-128}
+POTENTIAL=$2
+SYSTEM_SIZE=$3
+NUM_SAMPLES=$4
+KVAL=$5
+WARMUP_SAMPLES=${6:-128}
 
 SGE_TASK_ID=${SGE_TASK_ID:-1};
 TASK_INDEX="$((SGE_TASK_ID-1))"
@@ -61,9 +62,9 @@ export RUST_LOG=info
 CMD="
 $RUSTEXE --systemsize=\"$SYSTEM_SIZE\" \
 --k=\"$KVAL\" \
---potential-type=\"cosine\" \
+--potential-type=\"$POTENTIAL\" \
 --num-samples=\"$NUM_SAMPLES\" \
---output=\"$OUTPUT_DIR/L=${SYSTEM_SIZE}_k=${KVAL}_replicas_${MIN_REPLICA_INDEX}-${MAX_REPLICA_INDEX}_markov.npz\" \
+--output=\"$OUTPUT_DIR/markov_${POTENTIAL}_L=${SYSTEM_SIZE}_k=${KVAL}_replicas_${MIN_REPLICA_INDEX}-${MAX_REPLICA_INDEX}.npz\" \
 --replica-index-low=\"${MIN_REPLICA_INDEX}\" \
 --replica-index-high=\"${MAX_REPLICA_INDEX}\" \
 --hot-warmup-samples=\"${WARMUP_SAMPLES}\"
