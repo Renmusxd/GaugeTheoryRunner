@@ -13,15 +13,15 @@ path = "src/sweep.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-ndarray = "0.15"
-ndarray-npy = "0.8"
+ndarray = "0.16"
+ndarray-npy = "0.9"
 rand = "0.8"
 log = "0.4"
 chrono = "0.4"
 env_logger = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-complex-bessel-rs = "1.2"
+complex-bessel-rs = "1.2.1"
 num-complex = "0.4"
 
 [dependencies.gaugemc]
