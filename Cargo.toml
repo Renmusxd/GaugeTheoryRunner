@@ -21,7 +21,7 @@ chrono = "0.4"
 env_logger = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-complex-bessel-rs = "1.2"
+complex-bessel-rs = "1.2.1"
 num-complex = "0.4"
 
 [dependencies.gaugemc]
