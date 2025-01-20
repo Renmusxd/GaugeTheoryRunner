@@ -1,11 +1,11 @@
 #!/bin/sh -l
-#$ -N markov_rg
+#$ -N markov_critical_hotstart
 #$ -cwd
 #$ -m ea
 #$ -M sumnerh@bu.edu
 #$ -l gpus=1
 #$ -l gpu_c=6.0
-#$ -l h_rt=72:00:00
+#$ -l h_rt=24:00:00
 
 OUTDIR=$1
 POTENTIAL=$2
