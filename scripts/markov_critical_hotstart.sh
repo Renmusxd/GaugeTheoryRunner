@@ -1,5 +1,5 @@
 #!/bin/sh -l
-#$ -N markov_rg
+#$ -N markov_critical_hotstart
 #$ -cwd
 #$ -m ea
 #$ -M sumnerh@bu.edu
