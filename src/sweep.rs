@@ -1,17 +1,18 @@
 use crate::StepAction::{GlobalUpdate, LocalUpdate, ParallelTempering, PlaneShift};
+use std::fs;
 
 use clap::Parser;
 
 use gaugemc::{CudaBackend, CudaError, DualState, SiteIndex};
 
-use ndarray::{s, Array1, Array2, Array3, Array6, Axis};
+use gauge_mc_runner::Potential;
+use ndarray::{s, Array1, Array2, Array3, Array6, Axis, Slice};
 use ndarray_npy::NpzWriter;
 use rand::prelude::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use gauge_mc_runner::Potential;
-
+use std::path::Path;
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(version, about, long_about = None)]
@@ -20,7 +21,7 @@ struct Args {
     replicas_ks: usize,
     #[arg(short = 'L', long, default_value_t = 8)]
     systemsize: usize,
-    #[arg(short = 'N', long, default_value_t = 100)]
+    #[arg(short = 'N', long, default_value_t = 256)]
     num_samples: usize,
     #[arg(short, long, default_value_t = 10)]
     steps_per_sample: usize,
@@ -50,6 +51,8 @@ struct Args {
     chemicalhigh: f32,
     #[arg(long, default_value_t = 10)]
     log_every: usize,
+    #[arg(long, default_value_t = 64)]
+    write_result_every: usize,
     #[arg(long, default_value = "villain")]
     potential_type: Potential,
     #[arg(long, default_value_t = 64)]
@@ -103,11 +106,13 @@ struct RunResult {
     state: CudaBackend,
 }
 
-fn make_vns(potential: &Potential, ks: Array1<f32>, potential_values: usize, cap: Option<f32>) -> Array2<f32> {
-    let mut vns = Array2::zeros((
-        ks.shape()[0],
-        potential_values,
-    ));
+fn make_vns(
+    potential: &Potential,
+    ks: Array1<f32>,
+    potential_values: usize,
+    cap: Option<f32>,
+) -> Array2<f32> {
+    let mut vns = Array2::zeros((ks.shape()[0], potential_values));
     ndarray::Zip::indexed(&mut vns).for_each(|(r, np), x| {
         *x = potential.eval(np as u32, ks[r]);
     });
@@ -117,7 +122,10 @@ fn make_vns(potential: &Potential, ks: Array1<f32>, potential_values: usize, cap
     vns
 }
 
-fn run(args: &Args) -> Result<RunResult, String> {
+fn run<F>(args: &Args, write_fn: F) -> Result<RunResult, String>
+where
+    F: Fn(&RunResult, usize) -> Result<(), String>,
+{
     let chemical_potential_replicas = args.chemical_potential_replicas.unwrap_or(1);
 
     let ks = match args.replicas_ks {
@@ -142,8 +150,16 @@ fn run(args: &Args) -> Result<RunResult, String> {
     let mus = Array1::from_vec(mus);
 
     let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
-    replica_ks.iter_mut().enumerate().for_each(|(r, k)| *k = ks[r % args.replicas_ks]);
-    let vns = make_vns(&args.potential_type, replica_ks, args.potential_values, args.cap_potentials);
+    replica_ks
+        .iter_mut()
+        .enumerate()
+        .for_each(|(r, k)| *k = ks[r % args.replicas_ks]);
+    let vns = make_vns(
+        &args.potential_type,
+        replica_ks,
+        args.potential_values,
+        args.cap_potentials,
+    );
 
     let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
     ndarray::Zip::indexed(&mut replica_ks).for_each(|r, x| {
@@ -212,10 +228,10 @@ fn run(args: &Args) -> Result<RunResult, String> {
         args.chemical_potential_replicas
             .map(|_| replica_mus.clone()),
     )
-        .map_err(|x| x.to_string())?;
+    .map_err(|x| x.to_string())?;
     state.set_parallel_tracking(args.output_tempering_debug);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut local_versus_global = (0..args.local_updates_per_step)
         .map(|_| LocalUpdate)
         .chain((0..args.global_updates_per_step).map(|_| GlobalUpdate))
@@ -282,10 +298,14 @@ fn run(args: &Args) -> Result<RunResult, String> {
 
         let mut replica_ks = Array1::zeros(args.replicas_ks * chemical_potential_replicas);
         replica_ks.iter_mut().for_each(|k| *k = args.khot_start);
-        let hot_vns = make_vns(&args.potential_type, replica_ks, args.potential_values, args.cap_potentials);
+        let hot_vns = make_vns(
+            &args.potential_type,
+            replica_ks,
+            args.potential_values,
+            args.cap_potentials,
+        );
 
-        state.set_vns(hot_vns.view())
-            .map_err(|x| x.to_string())?;
+        state.set_vns(hot_vns.view()).map_err(|x| x.to_string())?;
         for warmup_sample in 0..args.hot_warmup_samples {
             if warmup_sample % args.log_every == 0 {
                 log::info!("Hot warmup {}/{}", warmup_sample, args.hot_warmup_samples);
@@ -297,10 +317,9 @@ fn run(args: &Args) -> Result<RunResult, String> {
                 &parallel_perms,
                 &mut rng,
             )
-                .map_err(|x| x.to_string())?;
-        }
-        state.set_vns(vns.view())
             .map_err(|x| x.to_string())?;
+        }
+        state.set_vns(vns.view()).map_err(|x| x.to_string())?;
         log::info!("Done!");
     }
 
@@ -315,15 +334,15 @@ fn run(args: &Args) -> Result<RunResult, String> {
             &parallel_perms,
             &mut rng,
         )
-            .map_err(|x| x.to_string())?;
+        .map_err(|x| x.to_string())?;
     }
     log::info!("Done!");
 
-    let mut action_output = Array2::zeros((
+    let action_output = Array2::zeros((
         args.num_samples,
         args.replicas_ks * chemical_potential_replicas,
     ));
-    let mut winding_output = if args.output_winding {
+    let winding_output = if args.output_winding {
         Some(Array3::zeros((
             args.num_samples,
             args.replicas_ks * chemical_potential_replicas,
@@ -332,7 +351,7 @@ fn run(args: &Args) -> Result<RunResult, String> {
     } else {
         None
     };
-    let mut plaquette_output = if args.output_plaquettes {
+    let plaquette_output = if args.output_plaquettes {
         Some(Array3::zeros((
             args.num_samples,
             args.replicas_ks * chemical_potential_replicas,
@@ -340,6 +359,21 @@ fn run(args: &Args) -> Result<RunResult, String> {
         )))
     } else {
         None
+    };
+
+    let mus = args.chemical_potential_replicas.map(|_| mus);
+    let replica_mus = args.chemical_potential_replicas.map(|_| replica_mus);
+
+    let mut result = RunResult {
+        actions: action_output,
+        windings: winding_output,
+        plaquettes: plaquette_output,
+        ks,
+        mus,
+        potentials: vns,
+        replica_mus,
+        replica_ks,
+        state: state,
     };
 
     for sample_number in 0..args.num_samples {
@@ -350,48 +384,47 @@ fn run(args: &Args) -> Result<RunResult, String> {
         steps(
             args,
             &mut local_versus_global,
-            &mut state,
+            &mut result.state,
             &parallel_perms,
             &mut rng,
         )
-            .map_err(|x| x.to_string())?;
+        .map_err(|x| x.to_string())?;
 
-        let energies = state.get_action_per_replica().map_err(|x| x.to_string())?;
-        let mut sample = action_output.index_axis_mut(Axis(0), sample_number);
+        let energies = result
+            .state
+            .get_action_per_replica()
+            .map_err(|x| x.to_string())?;
+        let mut sample = result.actions.index_axis_mut(Axis(0), sample_number);
         sample.iter_mut().zip(energies).for_each(|(x, y)| *x = y);
 
-        if let Some(winding_output) = winding_output.as_mut() {
-            let windings = state.get_winding_per_replica().map_err(|x| x.to_string())?;
+        if let Some(winding_output) = result.windings.as_mut() {
+            let windings = result
+                .state
+                .get_winding_per_replica()
+                .map_err(|x| x.to_string())?;
             let mut winding_sample = winding_output.index_axis_mut(Axis(0), sample_number);
             winding_sample
                 .iter_mut()
                 .zip(windings)
                 .for_each(|(x, y)| *x = y);
         }
-        if let Some(plaquette_output) = plaquette_output.as_mut() {
-            let plaqs = state.get_plaquette_counts().map_err(|x| x.to_string())?;
+        if let Some(plaquette_output) = result.plaquettes.as_mut() {
+            let plaqs = result
+                .state
+                .get_plaquette_counts()
+                .map_err(|x| x.to_string())?;
             let mut plaqs_sample = plaquette_output.index_axis_mut(Axis(0), sample_number);
-            plaqs_sample
-                .iter_mut()
-                .zip(plaqs)
-                .for_each(|(x, y)| *x = y);
+            plaqs_sample.iter_mut().zip(plaqs).for_each(|(x, y)| *x = y);
+        }
+
+        if sample_number > 0
+            && args.write_result_every > 0
+            && sample_number % args.write_result_every == 0
+        {
+            // Write partial result.
+            write_fn(&result, sample_number)?;
         }
     }
-
-    let mus = args.chemical_potential_replicas.map(|_| mus);
-    let replica_mus = args.chemical_potential_replicas.map(|_| replica_mus);
-
-    let result = RunResult {
-        actions: action_output,
-        windings: winding_output,
-        plaquettes: plaquette_output,
-        ks,
-        mus,
-        potentials: vns,
-        replica_mus,
-        replica_ks,
-        state,
-    };
 
     log::info!("Done!");
     Ok(result)
@@ -413,28 +446,51 @@ fn steps<R: Rng>(
                 ParallelTempering => {
                     state.parallel_tempering_step(&parallel_perms[i % parallel_perms.len()])?
                 }
-                PlaneShift(p) => {
-                    state.run_plane_shift(*p)?
-                }
+                PlaneShift(p) => state.run_plane_shift(*p)?,
             }
         }
     }
     Ok(())
 }
 
-fn write_output<Str: AsRef<str>>(runresult: &RunResult, filename: Str) -> Result<(), String> {
+fn write_output<Str>(
+    runresult: &RunResult,
+    filename: Str,
+    sample_range: Option<usize>,
+) -> Result<(), String>
+where
+    Str: AsRef<str>,
+{
+    log::info!("Writing to {}", filename.as_ref());
+
+    let slice = if let Some(s) = sample_range {
+        Slice::from(..s)
+    } else {
+        Slice::from(..)
+    };
+
+    let filename = filename.as_ref();
+    let working_filename = format!("{}.working", filename);
+
     let mut npz =
-        NpzWriter::new_compressed(File::create(filename.as_ref()).map_err(|x| x.to_string())?);
-    npz.add_array("actions", &runresult.actions)
+        NpzWriter::new_compressed(File::create(&working_filename).map_err(|x| x.to_string())?);
+
+    let actions = runresult.actions.slice_axis(Axis(0), slice);
+    npz.add_array("actions", &actions)
         .map_err(|x| x.to_string())?;
+
     if let Some(windings) = runresult.windings.as_ref() {
-        npz.add_array("windings", windings)
+        let windings = windings.slice_axis(Axis(0), slice);
+        npz.add_array("windings", &windings)
             .map_err(|x| x.to_string())?;
     }
+
     if let Some(plaquettes) = runresult.plaquettes.as_ref() {
-        npz.add_array("plaquettes", plaquettes)
+        let plaquettes = plaquettes.slice_axis(Axis(0), slice);
+        npz.add_array("plaquettes", &plaquettes)
             .map_err(|x| x.to_string())?;
     }
+
     npz.add_array("ks", &runresult.ks)
         .map_err(|x| x.to_string())?;
     npz.add_array("replica_ks", &runresult.replica_ks)
@@ -459,6 +515,14 @@ fn write_output<Str: AsRef<str>>(runresult: &RunResult, filename: Str) -> Result
             .map_err(|x| x.to_string())?;
     }
     npz.finish().map_err(|x| x.to_string())?;
+
+    let working_filename = Path::new(&working_filename);
+    if working_filename.exists() {
+        fs::rename(working_filename, Path::new(filename)).map_err(|x| x.to_string())?;
+    } else {
+        Err("Somehow the working file was not created")?;
+    }
+
     Ok(())
 }
 
@@ -493,8 +557,12 @@ fn main() -> Result<(), String> {
 
     log::debug!("Config: {:?}", args);
 
-    let result = run(&args).map_err(|x| x.to_string())?;
-    write_output(&result, &args.output)?;
+    let result = run(&args, |result, s| {
+        write_output(result, &args.output, Some(s))
+    })
+    .map_err(|x| x.to_string())?;
+
+    write_output(&result, &args.output, None)?;
 
     Ok(())
 }
