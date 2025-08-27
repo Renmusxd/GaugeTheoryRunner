@@ -24,6 +24,7 @@ SCRIPT=$(readlink -f "$0")
 SCRIPT_DIR=$(dirname "$SCRIPT")
 GITDIR=$(dirname $SCRIPT_DIR)
 
+mkdir -p $OUTDIR
 OUTPUT_DIR="$(realpath $OUTDIR)/$POTENTIAL/L=$SYSTEM_SIZE"
 
 echo "OUTPUT_DIR=$OUTPUT_DIR"
