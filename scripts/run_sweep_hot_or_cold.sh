@@ -19,10 +19,7 @@ REPLICAS=${6:-"16"}
 SAMPLES=${7:-"256"}
 KHOT=${8:-"2.0"}
 HOTSAMPLES=${9:-"256"}
-
-SCRIPT=$(readlink -f "$0")
-SCRIPT_DIR=$(dirname "$SCRIPT")
-GITDIR=$(dirname $SCRIPT_DIR)
+GITDIR=${10:-$( pwd )}
 
 mkdir -p $OUTDIR
 OUTPUT_DIR="$(realpath $OUTDIR)/$POTENTIAL/L=$SYSTEM_SIZE"
@@ -39,7 +36,6 @@ nvidia-smi -L
 nvidia-smi -q
 
 OWNDIR="$(realpath $OUTDIR)/build/$JOB_ID.$SGE_TASK_ID"
-echo "SCRIPT_DIR=$SCRIPT_DIR"
 echo "GITDIR=$GITDIR"
 echo "OWNDIR=$OWNDIR"
 
