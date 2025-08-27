@@ -10,6 +10,12 @@
 module load cuda/12.2
 module load python3/3.10.12
 
+# Output a lot of GPU details
+echo "Running GPU checking code"
+nvidia-smi --list-gpus
+nvidia-smi -L
+nvidia-smi -q
+
 OUTDIR=${1:-"/tmp"}
 POTENTIAL=${2:-"cosine"}
 SYSTEM_SIZE=${3:-"4"}
@@ -23,34 +29,24 @@ GITDIR=${10:-$( pwd )}
 
 mkdir -p $OUTDIR
 OUTPUT_DIR="$(realpath $OUTDIR)/$POTENTIAL/L=$SYSTEM_SIZE"
+BUILDDIR="$(realpath $OUTDIR)/build/$JOB_ID.$SGE_TASK_ID"
 
 echo "OUTPUT_DIR=$OUTPUT_DIR"
-mkdir -p $OUTPUT_DIR
-cd $OUTPUT_DIR || exit
-export WD=$OUTPUT_DIR
-
-# Output a lot of GPU details
-echo "Running GPU checking code"
-nvidia-smi --list-gpus
-nvidia-smi -L
-nvidia-smi -q
-
-OWNDIR="$(realpath $OUTDIR)/build/$JOB_ID.$SGE_TASK_ID"
 echo "GITDIR=$GITDIR"
-echo "OWNDIR=$OWNDIR"
+echo "BUILDDIR=$BUILDDIR"
 
+mkdir -p $OUTPUT_DIR
+mkdir -p $BUILDDIR
 cd $GITDIR || exit
-TO_RUN="cargo build --quiet --release -j ${NSLOTS:-1} --target-dir=\"$OWNDIR/target\""
+TO_RUN="cargo build --quiet --release -j ${NSLOTS:-1} --target-dir=\"$BUILDDIR/target\""
 echo $TO_RUN
 eval $TO_RUN
+RUSTEXE="$BUILDDIR/target/release/sweep"
 
-cd $OUTPUT_DIR || exit
-RUSTEXE="$OWNDIR/target/release/sweep"
 
 export RAYON_NUM_THREADS=${NSLOTS:-1}
 export RUST_BACKTRACE=full
 export RUST_LOG=info
-
 TORUN="
 $RUSTEXE --systemsize=\"$SYSTEM_SIZE\" \
 --potential-type=\"$POTENTIAL\" \
