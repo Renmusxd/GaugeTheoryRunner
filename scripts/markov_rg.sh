@@ -5,6 +5,7 @@
 #$ -M sumnerh@bu.edu
 #$ -l gpus=1
 #$ -l gpu_c=6.0
+#$ -l gpu_memory=8G
 
 OUTDIR=$1
 SYSTEM_SIZE=$2
@@ -52,7 +53,7 @@ echo "Running python code"
 
 export RAYON_NUM_THREADS=${NSLOTS:-1}
 export RUST_LOG=info
-
+export GAUGEMC_BLOCK_SIZE=512
 
 echo "
 $RUSTEXE --systemsize=\"$SYSTEM_SIZE\" \
